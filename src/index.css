@@ -4,6 +4,15 @@
 
 .dark {
   color-scheme: dark;
+
+  /* Dark surfaces derived from #1e2021 (scoped under .dark,
+     so light mode is untouched) */
+  --color-slate-950: #1e2021;
+  --color-slate-900: #26282c;
+  --color-slate-800: #31353b;
+  --color-slate-700: #3f454e;
+  --color-slate-600: #565e69;
+  --color-slate-500: #7b838d;
 }
 
 html {
