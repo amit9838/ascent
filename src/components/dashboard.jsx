@@ -122,10 +122,10 @@ export function WeeklyGoalCard({ done, points, total, solved }) {
           Weekly goal
         </h2>
         <Link
-          to="/profile"
+          to="/progress"
           className="text-xs text-blue-600 hover:underline dark:text-blue-400"
         >
-          Change in Profile
+          Adjust goal
         </Link>
       </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">

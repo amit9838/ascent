@@ -63,7 +63,7 @@ export function RewardsCard({ done, points }) {
           Rewards
         </h2>
         <Link
-          to="/profile"
+          to="/progress"
           className="text-sm text-blue-600 hover:underline dark:text-blue-400"
         >
           View treasury

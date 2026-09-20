@@ -4,10 +4,10 @@ import TopicPage from "./pages/TopicPage.jsx";
 import NotesPage from "./pages/NotesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import TopicsPage from "./pages/TopicsPage.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
+import ProgressPage from "./pages/ProgressPage.jsx";
 import { useProgress } from "./lib/progress.js";
 import { useTheme } from "./lib/theme.js";
-import { GridIcon, MountainIcon, NotesIcon, SettingsIcon, UserIcon } from "./components/icons.jsx";
+import { ChartIcon, GridIcon, MountainIcon, NotesIcon, SettingsIcon } from "./components/icons.jsx";
 
 // HashRouter is required for gh-pages: static hosting has no URL
 // rewrites, so deep links only work with hash-based routing.
@@ -37,13 +37,13 @@ export default function App() {
                 <GridIcon className="h-4 w-4" />
                 Topics
               </Link>
+              <Link to="/progress" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+                <ChartIcon className="h-4 w-4" />
+                Progress
+              </Link>
               <Link to="/settings" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
                 <SettingsIcon className="h-4 w-4" />
                 Settings
-              </Link>
-              <Link to="/profile" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
-                <UserIcon className="h-4 w-4" />
-                Profile
               </Link>
             </nav>
           </div>
@@ -58,7 +58,7 @@ export default function App() {
               element={<SettingsPage done={done} onReplace={replaceAll} onReset={reset} theme={theme} setTheme={setTheme} />}
             />
             <Route path="/topics" element={<TopicsPage done={done} />} />
-            <Route path="/profile" element={<ProfilePage done={done} />} />
+            <Route path="/progress" element={<ProgressPage done={done} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

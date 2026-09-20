@@ -17,7 +17,7 @@ export default function SettingsPage({ done, onReplace, onReset, theme, setTheme
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `dsa-profile-${day}.json`;
+    a.download = `dsa-progress-${day}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
