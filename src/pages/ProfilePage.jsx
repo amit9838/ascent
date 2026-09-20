@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TOPICS } from "../data/topics.js";
 import { loadTopicCsv, F } from "../lib/csv.js";
+import { buildPointsMap } from "../lib/points.js";
 import { getWeeklyTarget, setWeeklyTarget } from "../lib/plans.js";
 import {
   collectDaily,
@@ -15,7 +16,6 @@ import {
   maxStreak,
   rankLadder,
 } from "../lib/titles.js";
-import { OverviewRow, fmtDay } from "../components/dashboard.jsx";
 import { CheckIcon, FlameIcon, StarIcon, TrophyIcon } from "../components/icons.jsx";
 import { ProgressBar } from "../components/ui.jsx";
 import { GoldCoin, SapphireCoin } from "../components/coins.jsx";
@@ -66,31 +66,6 @@ function ShelfRow({ icon, color, name, req, earned }) {
   );
 }
 
-function RankBanner({ solved, total }) {
-  const { current, next } = currentRank(solved, total);
-  return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm dark:border-amber-900 dark:bg-amber-950/50">
-      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-        Current rank
-      </p>
-      <p className="mt-1 text-2xl font-bold">{current ? current.name : "Unranked"}</p>
-      {next && (
-        <>
-          <ProgressBar done={solved} total={next.solves} className="mt-2" />
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {next.solves - solved} more to {next.name}
-          </p>
-        </>
-      )}
-      {!next && (
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Max rank achieved. The crown is yours.
-        </p>
-      )}
-    </div>
-  );
-}
-
 function rankReq(r, total) {
   if (r.solves === 1) return "Solve your first problem";
   if (r.solves >= total) return `Solve all ${total}`;
@@ -102,9 +77,6 @@ function TrophyShelf({ done, solved, total, perfectWeeks }) {
   return (
     <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <h2 className="text-lg font-semibold">Treasure Hall</h2>
-      <div className="mt-3">
-        <RankBanner solved={solved} total={total} />
-      </div>
       <div className="mt-4 grid gap-6 md:grid-cols-3">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -164,10 +136,15 @@ function TrophyShelf({ done, solved, total, perfectWeeks }) {
 
 export default function ProfilePage({ done }) {
   const [data, setData] = useState(null); // { slug: rows[] }
+  const pointsMap = useMemo(() => buildPointsMap(data), [data]);
   const [rewards, setRewards] = useState(() =>
-    refreshRewards(done, getWeeklyTarget())
+    refreshRewards(done, pointsMap, getWeeklyTarget())
   );
   const [target, setTarget] = useState(getWeeklyTarget);
+
+  useEffect(() => {
+    setRewards(refreshRewards(done, pointsMap, getWeeklyTarget()));
+  }, [data, done, pointsMap, target]);
   const changeTarget = (d) => {
     const next = Math.min(100, Math.max(1, target + d));
     setTarget(next);
@@ -206,6 +183,26 @@ export default function ProfilePage({ done }) {
   );
   const stars = daily.filter(([, s]) => s === "collected").length;
   const trophies = weekly.filter(([, s]) => s === "collected").length;
+  const rank = data ? currentRank(solved, total) : { current: null, next: null };
+  const mix = { easy: 0, medium: 0, hard: 0 };
+  if (data) {
+    for (const rows of Object.values(data)) {
+      for (const r of rows) {
+        if (done[r[F.link]]) {
+          const d = (r[F.difficulty] || "").toLowerCase();
+          if (d === "easy" || d === "medium" || d === "hard") mix[d]++;
+        }
+      }
+    }
+  }
+  const mastery = TOPICS.map((t) => {
+    const rows = data?.[t.slug] ?? [];
+    const s = rows.filter((r) => done[r[F.link]]).length;
+    return { topic: t, solved: s, total: rows.length };
+  }).sort(
+    (a, b) =>
+      b.solved / Math.max(1, b.total) - a.solved / Math.max(1, a.total)
+  );
 
   return (
     <div>
@@ -239,7 +236,41 @@ export default function ProfilePage({ done }) {
         </div>
       </div>
 
-      <OverviewRow done={done} total={data ? total : null} solved={solved} />
+      {data ? (
+        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-center gap-3">
+            <span className="shrink-0 rounded-lg bg-amber-100 p-2 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+              <TrophyIcon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                <p className="truncate text-sm font-bold">
+                  {rank.current ? rank.current.name : "Unranked"}
+                  <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    {rank.next
+                      ? `${rank.next.solves - solved} more to ${rank.next.name}`
+                      : "The crown is yours."}
+                  </span>
+                </p>
+                <p className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                  {solved}/{total}
+                </p>
+              </div>
+              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-500"
+                  style={{
+                    width: rank.next
+                      ? `${Math.min(100, Math.round((solved / rank.next.solves) * 100))}%`
+                      : "100%",
+                  }}
+                />
+              </div>
+
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {data ? (
         <TrophyShelf
@@ -249,6 +280,67 @@ export default function ProfilePage({ done }) {
           perfectWeeks={Object.keys(rewards.weekly).length}
         />
       ) : null}
+
+      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Topic mastery</h2>
+          {solved > 0 && (
+            <div
+              className="flex items-center gap-2"
+              title={`Solved mix: ${mix.easy} easy · ${mix.medium} medium · ${mix.hard} hard`}
+            >
+              <div className="flex h-1.5 w-36 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className="h-full bg-emerald-500"
+                  style={{ width: `${(mix.easy / solved) * 100}%` }}
+                />
+                <div
+                  className="h-full bg-amber-500"
+                  style={{ width: `${(mix.medium / solved) * 100}%` }}
+                />
+                <div
+                  className="h-full bg-rose-500"
+                  style={{ width: `${(mix.hard / solved) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {mix.easy}e · {mix.medium}m · {mix.hard}h
+              </p>
+            </div>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Solved per topic, best first.
+        </p>
+        {!data ? (
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            Loading topics…
+          </p>
+        ) : (
+          <ul className="mt-3 grid gap-x-6 md:grid-cols-2">
+            {mastery.map(({ topic, solved: s, total: n }) => {
+              const Icon = topic.icon;
+              return (
+                <li key={topic.slug} className="flex items-center gap-3 py-1.5">
+                  <span className={`shrink-0 rounded-lg p-1.5 ${topic.chip}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span
+                    className="w-32 shrink-0 truncate text-sm font-medium"
+                    title={topic.name}
+                  >
+                    {topic.name}
+                  </span>
+                  <ProgressBar done={s} total={n} className="hidden sm:block" />
+                  <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
+                    {s}/{n}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-2 my-4">
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { dayCounts, dayKey, weekStart } from "../lib/activity.js";
+import { dayKey, dayPoints, weekStart } from "../lib/activity.js";
 import {
   collectDaily,
   collectWeekly,
@@ -16,17 +16,17 @@ const card =
 const primaryBtn =
   "rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white";
 
-export function RewardsCard({ done }) {
+export function RewardsCard({ done, points }) {
   const target = getWeeklyTarget();
   const dt = dailyTarget(target);
-  const [rewards, setRewards] = useState(() => refreshRewards(done, target));
+  const [rewards, setRewards] = useState(() => refreshRewards(done, points, target));
 
   useEffect(() => {
-    setRewards(refreshRewards(done, target));
-  }, [done, target]);
+    setRewards(refreshRewards(done, points, target));
+  }, [done, points, target]);
 
   const todayK = dayKey();
-  const counts = dayCounts(done);
+  const counts = dayPoints(done, points);
   const todayCount = counts[todayK] ?? 0;
   const todayStatus = rewards.daily[todayK]; // earned | collected | undefined
 
@@ -46,7 +46,7 @@ export function RewardsCard({ done }) {
         month: "short",
         day: "numeric",
       }),
-      count: c,
+      points: c,
       earned: c >= dt && k <= todayK,
       future: k > todayK,
       isToday: k === todayK,
@@ -81,7 +81,7 @@ export function RewardsCard({ done }) {
               <p className="text-2xl font-bold leading-tight">
                 {todayCount}
                 <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-                  /{dt} today
+                  /{dt} pts
                 </span>
               </p>
             </div>
@@ -134,7 +134,7 @@ export function RewardsCard({ done }) {
             {days.map((d) => (
               <div
                 key={d.key}
-                title={`${d.full}: ${d.count} solved`}
+                title={`${d.full}: ${d.points} pts`}
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
                   d.earned
                     ? "bg-emerald-500 text-white"
@@ -162,6 +162,17 @@ export function RewardsCard({ done }) {
           </div>
         </div>
       </div>
+      <p className="mt-2 flex flex-wrap items-center justify-start gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> 1 pt · Easy
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-amber-500" /> 2 pts · Medium
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-rose-500" /> 3 pts · Hard
+        </span>
+      </p>
     </section>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { TOPICS } from "../data/topics.js";
 import { loadTopicCsv, F } from "../lib/csv.js";
+import { buildPointsMap, pointsOf } from "../lib/points.js";
 import { pickQuestionOfTheDay } from "../lib/qotd.js";
 import { DifficultyBadge, ExternalLink } from "../components/ui.jsx";
 import {
@@ -10,7 +11,7 @@ import {
   WeeklyGoalCard,
 } from "../components/dashboard.jsx";
 import { RewardsCard } from "../components/rewards.jsx";
-import { CheckIcon, ZapIcon } from "../components/icons.jsx";
+import { ArrowRightIcon, CheckIcon, ZapIcon } from "../components/icons.jsx";
 
 function QotdCard({ qotd, done, onToggle, dimmed }) {
   return (
@@ -90,6 +91,16 @@ export default function HomePage({ done, onToggle }) {
   const solved = data
     ? TOPICS.reduce((a, t) => a + solvedIn(data[t.slug] ?? []), 0)
     : 0;
+  const pointsMap = useMemo(() => buildPointsMap(data), [data]);
+  const totalPoints = useMemo(
+    () => Object.values(pointsMap).reduce((a, p) => a + p, 0),
+    [pointsMap]
+  );
+  const solvedPoints = useMemo(
+    () =>
+      Object.entries(done).reduce((a, [url]) => a + pointsOf(pointsMap, url), 0),
+    [done, pointsMap]
+  );
 
   const qotd = useMemo(() => {
     if (!data) return null;
@@ -101,27 +112,35 @@ export default function HomePage({ done, onToggle }) {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Track your DSA grind across all topics.
-        </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Track your DSA grind across all topics.
+          </p>
+        </div>
+        <Link
+          to={qotd && !done[qotd.id] ? `/topic/${qotd.topic.slug}` : "/topics"}
+          className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+        >
+          Practice now <ArrowRightIcon className="h-4 w-4" />
+        </Link>
       </div>
 
       {qotd && !done[qotd.id] && (
         <QotdCard qotd={qotd} done={done} onToggle={onToggle} />
       )}
 
-      <OverviewRow done={done} total={data ? total : null} solved={solved} />
+      <OverviewRow done={done} points={pointsMap} total={data ? total : null} solved={solved} />
 
-      <RewardsCard done={done} />
+      <RewardsCard done={done} points={pointsMap} />
 
       <div className="mb-6 grid gap-4 xl:grid-cols-5">
         <div className="xl:col-span-2">
-          <WeeklyGoalCard done={done} total={data ? total : 0} solved={solved} />
+          <WeeklyGoalCard done={done} points={pointsMap} total={totalPoints} solved={solvedPoints} />
         </div>
         <div className="xl:col-span-3">
-          <ActivityHeatmap done={done} />
+          <ActivityHeatmap done={done} points={pointsMap} />
         </div>
       </div>
 

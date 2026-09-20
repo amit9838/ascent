@@ -1,18 +1,20 @@
 import {
   bestDay,
   currentStreak,
-  dayCounts,
   dayKey,
+  dayPoints,
   heatmapWeeks,
   solvedThisWeek,
   weekRangeLabel,
 } from "../lib/activity.js";
 import { getWeeklyTarget } from "../lib/plans.js";
 import { dailyTarget } from "../lib/rewards.js";
+import { pointsOf } from "../lib/points.js";
 import {
   CalendarIcon,
   CheckIcon,
   FlameIcon,
+  StarIcon,
   TargetIcon,
   ZapIcon,
 } from "./icons.jsx";
@@ -54,32 +56,42 @@ function motivation({ streak, week, target, solved, total }) {
   return `${target - week} more to hit this week's goal of ${target}.`;
 }
 
-export function OverviewRow({ done, total, solved }) {
+export function OverviewRow({ done, points, total, solved }) {
   const streak = currentStreak(done);
-  const week = solvedThisWeek(done);
-  const best = bestDay(done);
+  const week = solvedThisWeek(done, points);
+  const best = bestDay(done, points);
   const target = getWeeklyTarget();
+  const totalPts = Object.entries(done).reduce(
+    (a, [url]) => a + pointsOf(points, url),
+    0
+  );
 
   return (
     <div className="mb-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Tile
-          icon={<FlameIcon className="h-4 w-4" />}
+          icon={<FlameIcon className="h-4 w-4 text-orange-500 dark:text-orange-400" />}
           label="Streak"
           value={`${streak}`}
           sub={streak === 1 ? "day in a row" : "days in a row"}
         />
         <Tile
-          icon={<ZapIcon className="h-4 w-4" />}
+          icon={<ZapIcon className="h-4 w-4 text-amber-500 dark:text-amber-400" />}
           label="This week"
           value={`${week}`}
-          sub={weekRangeLabel()}
+          sub={`${weekRangeLabel()} · pts`}
         />
         <Tile
-          icon={<CalendarIcon className="h-4 w-4" />}
+          icon={<CalendarIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />}
           label="Best day"
-          value={best ? `${best.count}` : "—"}
-          sub={best ? `${fmtDay(best.day)} · ${best.count} solved` : "no dated solves yet"}
+          value={best ? `${best.points}` : "—"}
+          sub={best ? `${fmtDay(best.day)} · ${best.points} pts` : "no dated solves yet"}
+        />
+        <Tile
+          icon={<StarIcon className="h-4 w-4 text-amber-500 dark:text-amber-400" />}
+          label="Total points"
+          value={`${totalPts}`}
+          sub="earned all time"
         />
       </div>
       <p className="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -90,12 +102,12 @@ export function OverviewRow({ done, total, solved }) {
   );
 }
 
-export function WeeklyGoalCard({ done, total, solved }) {
+export function WeeklyGoalCard({ done, points, total, solved }) {
   const target = getWeeklyTarget();
-  const week = solvedThisWeek(done);
+  const week = solvedThisWeek(done, points);
   const pct = target > 0 ? Math.min(100, Math.round((week / target) * 100)) : 0;
   const dt = dailyTarget(target);
-  const todayCount = dayCounts(done)[dayKey()] ?? 0;
+  const todayCount = dayPoints(done, points)[dayKey()] ?? 0;
 
   const remaining = Math.max(0, (total ?? 0) - solved);
   const weeksLeft = target > 0 ? Math.ceil(remaining / target) : null;
@@ -138,14 +150,14 @@ export function WeeklyGoalCard({ done, total, solved }) {
         )}
       </p>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Today: {todayCount}/{dt}
+        Today: {todayCount}/{dt} pts
         {todayCount >= dt
           ? " — daily target smashed"
           : ` — ${dt - todayCount} more to go today`}
       </p>
       {total > 0 && remaining > 0 && (
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          At {target}/week → all {total} done in ~{weeksLeft}{" "}
+          At {target} pts/week → {remaining} pts to go (~{weeksLeft}{" "}
           {weeksLeft === 1 ? "week" : "weeks"} (
           {eta.toLocaleDateString(undefined, { month: "short", year: "numeric" })}
           ).
@@ -160,16 +172,16 @@ export function WeeklyGoalCard({ done, total, solved }) {
   );
 }
 
-function cellColor(count, future) {
+function cellColor(points, future) {
   if (future) return "bg-slate-100 dark:bg-slate-800 opacity-50";
-  if (count <= 0) return "bg-slate-100 dark:bg-slate-800";
-  if (count <= 2) return "bg-emerald-200 dark:bg-emerald-900";
-  if (count <= 4) return "bg-emerald-400 dark:bg-emerald-700";
+  if (points <= 0) return "bg-slate-100 dark:bg-slate-800";
+  if (points <= 2) return "bg-emerald-200 dark:bg-emerald-900";
+  if (points <= 5) return "bg-emerald-400 dark:bg-emerald-700";
   return "bg-emerald-600 dark:bg-emerald-500";
 }
 
-export function ActivityHeatmap({ done }) {
-  const cols = heatmapWeeks(done, 15);
+export function ActivityHeatmap({ done, points }) {
+  const cols = heatmapWeeks(done, points, 15);
   return (
     <section className={`${card} h-full`}>
       <h2 className="text-lg font-semibold">Activity</h2>
@@ -181,8 +193,8 @@ export function ActivityHeatmap({ done }) {
           days.map((d) => (
             <div
               key={`${w}-${d.key}`}
-              title={`${d.label}: ${d.count} solved`}
-              className={`h-3 w-3 rounded-[3px] ${cellColor(d.count, d.future)}`}
+              title={`${d.label}: ${d.points} pts`}
+              className={`h-3 w-3 rounded-[3px] ${cellColor(d.points, d.future)}`}
             />
           ))
         )}
