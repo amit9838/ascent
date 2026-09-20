@@ -1,4 +1,4 @@
-// Rewards engine: daily stars (hit the daily target) and weekly trophies
+// Rewards engine: Daybreak Stars (hit the daily target) and Sapphire Crowns
 // (hit the daily target every day of a week). Earned rewards stay
 // claimable until collected. State: { daily: { "YYYY-MM-DD": "earned" | "collected" },
 // weekly: { "<monday YYYY-MM-DD>": "earned" | "collected" } }

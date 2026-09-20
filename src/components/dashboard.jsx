@@ -1,22 +1,13 @@
-import { useEffect, useState } from "react";
-import { TOPICS } from "../data/topics.js";
-import { F } from "../lib/csv.js";
 import {
   bestDay,
   currentStreak,
   dayCounts,
   dayKey,
   heatmapWeeks,
-  monthKey,
   solvedThisWeek,
   weekRangeLabel,
 } from "../lib/activity.js";
-import {
-  getMonthPlan,
-  getWeeklyTarget,
-  setWeeklyTarget,
-  toggleMonthTopic,
-} from "../lib/plans.js";
+import { getWeeklyTarget } from "../lib/plans.js";
 import { dailyTarget } from "../lib/rewards.js";
 import {
   CalendarIcon,
@@ -25,6 +16,7 @@ import {
   TargetIcon,
   ZapIcon,
 } from "./icons.jsx";
+import { Link } from "react-router-dom";
 import { ProgressBar } from "./ui.jsx";
 
 const card =
@@ -55,8 +47,8 @@ function Tile({ icon, label, value, sub, children }) {
 }
 
 function motivation({ streak, week, target, solved, total }) {
-  if (total > 0 && solved >= total) return "All problems solved. Legendary.";
-  if (streak >= 7) return `${streak}-day streak — unstoppable. Keep shipping.`;
+  if (total > 0 && solved >= total) return "All problems solved. The crown is yours.";
+  if (streak >= 7) return `${streak}-day streak — keep shining.`;
   if (week >= target) return "Weekly goal smashed. Bank the momentum.";
   if (solved === 0) return "Solve your first problem to light the spark.";
   return `${target - week} more to hit this week's goal of ${target}.`;
@@ -67,19 +59,10 @@ export function OverviewRow({ done, total, solved }) {
   const week = solvedThisWeek(done);
   const best = bestDay(done);
   const target = getWeeklyTarget();
-  const pct = total > 0 ? Math.round((solved / total) * 100) : 0;
 
   return (
     <div className="mb-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile
-          icon={<CheckIcon className="h-4 w-4" />}
-          label="Total solved"
-          value={total == null ? "…" : `${solved}/${total}`}
-          sub={total ? `${pct}% complete` : null}
-        >
-          {total ? <ProgressBar done={solved} total={total} className="mt-2" /> : null}
-        </Tile>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Tile
           icon={<FlameIcon className="h-4 w-4" />}
           label="Streak"
@@ -108,25 +91,16 @@ export function OverviewRow({ done, total, solved }) {
 }
 
 export function WeeklyGoalCard({ done, total, solved }) {
-  const [target, setTarget] = useState(getWeeklyTarget);
+  const target = getWeeklyTarget();
   const week = solvedThisWeek(done);
   const pct = target > 0 ? Math.min(100, Math.round((week / target) * 100)) : 0;
   const dt = dailyTarget(target);
   const todayCount = dayCounts(done)[dayKey()] ?? 0;
 
-  const change = (d) => {
-    const next = Math.min(100, Math.max(1, target + d));
-    setTarget(next);
-    setWeeklyTarget(next);
-  };
-
   const remaining = Math.max(0, (total ?? 0) - solved);
   const weeksLeft = target > 0 ? Math.ceil(remaining / target) : null;
   const eta = new Date();
   if (weeksLeft != null) eta.setDate(eta.getDate() + weeksLeft * 7);
-
-  const stepper =
-    "rounded-md border border-slate-300 px-2 py-0.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800";
 
   return (
     <section className={`${card} h-full`}>
@@ -135,15 +109,12 @@ export function WeeklyGoalCard({ done, total, solved }) {
           <TargetIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           Weekly goal
         </h2>
-        <div className="flex items-center gap-1">
-          <button onClick={() => change(-1)} className={stepper} aria-label="Decrease weekly goal">
-            −
-          </button>
-          <span className="w-8 text-center font-bold">{target}</span>
-          <button onClick={() => change(1)} className={stepper} aria-label="Increase weekly goal">
-            +
-          </button>
-        </div>
+        <Link
+          to="/profile"
+          className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+        >
+          Change in Profile
+        </Link>
       </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         {weekRangeLabel()} · questions per week
@@ -228,94 +199,4 @@ export function ActivityHeatmap({ done }) {
   );
 }
 
-export function MonthlyPlanCard({ data, done }) {
-  const [offset, setOffset] = useState(0);
-  const base = new Date();
-  const mDate = new Date(base.getFullYear(), base.getMonth() + offset, 1);
-  const mKey = monthKey(mDate);
-  const [planned, setPlanned] = useState(() => getMonthPlan(monthKey()));
 
-  useEffect(() => {
-    setPlanned(getMonthPlan(mKey));
-  }, [mKey]);
-
-  const toggle = (slug) => setPlanned(toggleMonthTopic(mKey, slug));
-  const label = mDate.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
-
-  const stats = TOPICS.map((t) => {
-    const rows = data?.[t.slug] ?? [];
-    const s = rows.filter((r) => done[r[F.link]]).length;
-    return { topic: t, total: rows.length, solved: s };
-  });
-  const plannedStats = stats.filter((s) => planned.includes(s.topic.slug));
-  const complete = plannedStats.filter(
-    (s) => s.total > 0 && s.solved >= s.total
-  ).length;
-
-  const navBtn =
-    "rounded-md border border-slate-300 px-2 py-0.5 text-sm hover:bg-slate-100 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-800";
-
-  return (
-    <section className={`${card} mb-6`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          Monthly plan
-        </h2>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={offset <= -12}
-            onClick={() => setOffset((o) => o - 1)}
-            className={navBtn}
-            aria-label="Previous month"
-          >
-            ‹ Prev
-          </button>
-          <span className="min-w-36 text-center text-sm font-medium">{label}</span>
-          <button
-            disabled={offset >= 12}
-            onClick={() => setOffset((o) => o + 1)}
-            className={navBtn}
-            aria-label="Next month"
-          >
-            Next ›
-          </button>
-        </div>
-      </div>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        {planned.length === 0
-          ? `No topics planned for ${label} yet — tick the boxes to plan your month.`
-          : `${complete} of ${planned.length} planned topics complete.`}
-      </p>
-      {!data ? (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-          Loading topics…
-        </p>
-      ) : (
-        <div className="mt-3 grid gap-x-6 sm:grid-cols-2">
-          {stats.map(({ topic, total, solved }) => (
-            <label
-              key={topic.slug}
-              className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-            >
-              <input
-                type="checkbox"
-                checked={planned.includes(topic.slug)}
-                onChange={() => toggle(topic.slug)}
-                className="h-4 w-4 shrink-0 accent-emerald-600"
-              />
-              <span className="w-40 shrink-0 text-sm font-medium">{topic.name}</span>
-              <span className="w-14 shrink-0 text-right text-xs text-slate-500 dark:text-slate-400">
-                {solved}/{total}
-              </span>
-              <ProgressBar done={solved} total={total} className="hidden sm:block" />
-            </label>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}

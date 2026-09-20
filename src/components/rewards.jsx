@@ -8,13 +8,8 @@ import {
   refreshRewards,
 } from "../lib/rewards.js";
 import { getWeeklyTarget } from "../lib/plans.js";
-import {
-  CheckIcon,
-  GiftIcon,
-  StarIcon,
-  TrophyIcon,
-} from "./icons.jsx";
-import { ProgressBar } from "./ui.jsx";
+import { CheckIcon, GiftIcon } from "./icons.jsx";
+import { GoldCoin, SapphireCoin } from "./coins.jsx";
 
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900";
@@ -71,102 +66,101 @@ export function RewardsCard({ done }) {
           to="/profile"
           className="text-sm text-blue-600 hover:underline dark:text-blue-400"
         >
-          View collection
+          View treasury
         </Link>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
-        <div className="flex items-center gap-3">
-          <StarIcon
-            className={`h-8 w-8 ${
-              todayStatus === "collected"
-                ? "fill-amber-400 text-amber-400"
-                : todayStatus === "earned"
-                  ? "text-amber-400"
-                  : "text-slate-300 dark:text-slate-600"
-            }`}
-          />
-          <div>
-            <p className="text-sm font-semibold">Today's star</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {todayCount}/{dt} solved today
-            </p>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/60">
+          <div className="flex items-center gap-3">
+            <GoldCoin
+              className={`h-12 w-12 shrink-0 drop-shadow-md ${todayStatus ? "" : "grayscale opacity-50"}`}
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Daybreak Star</p>
+              <p className="text-2xl font-bold leading-tight">
+                {todayCount}
+                <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
+                  /{dt} today
+                </span>
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-400 transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.round((todayCount / dt) * 100))}%` }}
+            />
+          </div>
+          <div className="mt-2 min-h-7 text-sm">
+            {todayStatus === "collected" ? (
+              <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                <CheckIcon className="h-4 w-4" /> Collected
+              </span>
+            ) : todayStatus === "earned" ? (
+              <button onClick={() => setRewards(collectDaily(todayK))} className={primaryBtn}>
+                Claim
+              </button>
+            ) : (
+              <span className="text-slate-500 dark:text-slate-400">
+                {dt - todayCount} more to go
+              </span>
+            )}
           </div>
         </div>
-        {todayStatus === "collected" ? (
-          <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-            <CheckIcon className="h-4 w-4" /> Collected
-          </span>
-        ) : todayStatus === "earned" ? (
-          <button onClick={() => setRewards(collectDaily(todayK))} className={primaryBtn}>
-            Collect star
-          </button>
-        ) : (
-          <span className="text-sm text-slate-500 dark:text-slate-400">
-            {dt - todayCount} more to go
-          </span>
-        )}
-      </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        {days.map((d) => (
-          <div
-            key={d.key}
-            title={`${d.full}: ${d.count} solved`}
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-              d.earned
-                ? "bg-emerald-500 text-white"
-                : d.future
-                  ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
-                  : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
-            } ${d.isToday ? "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900" : ""}`}
-          >
-            {d.earned ? <CheckIcon className="h-4 w-4" /> : d.initial}
+        <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/60">
+          <div className="flex items-center gap-3">
+            <SapphireCoin
+              className={`h-12 w-12 shrink-0 drop-shadow-md ${weekStatus ? "" : "grayscale opacity-50"}`}
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Sapphire Crown</p>
+              <p className="text-2xl font-bold leading-tight">
+                {hitDays}
+                <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
+                  /7 days
+                </span>
+              </p>
+            </div>
           </div>
-        ))}
-        <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">
-          {hitDays}/7 days
-        </span>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
-        <div className="flex items-center gap-3">
-          <TrophyIcon
-            className={`h-8 w-8 ${
-              weekStatus === "collected"
-                ? "fill-amber-400 text-amber-500"
-                : weekStatus === "earned"
-                  ? "text-amber-500"
-                  : "text-slate-300 dark:text-slate-600"
-            }`}
-          />
-          <div>
-            <p className="text-sm font-semibold">Weekly trophy</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hit the daily target all 7 days
-            </p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet-600 via-purple-300 to-violet-600 transition-all duration-500"
+              style={{ width: `${Math.round((hitDays / 7) * 100)}%` }}
+            />
+          </div>
+          <div className="mt-2 flex items-center gap-1.5">
+            {days.map((d) => (
+              <div
+                key={d.key}
+                title={`${d.full}: ${d.count} solved`}
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                  d.earned
+                    ? "bg-emerald-500 text-white"
+                    : d.future
+                      ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                      : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+                } ${d.isToday ? "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900" : ""}`}
+              >
+                {d.earned ? <CheckIcon className="h-3 w-3" /> : d.initial}
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 min-h-7 text-sm">
+            {weekStatus === "collected" ? (
+              <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                <CheckIcon className="h-4 w-4" /> Collected
+              </span>
+            ) : weekStatus === "earned" ? (
+              <button onClick={() => setRewards(collectWeekly(weekKey))} className={primaryBtn}>
+                Claim
+              </button>
+            ) : (
+              <span className="text-slate-500 dark:text-slate-400">Win all 7 days</span>
+            )}
           </div>
         </div>
-        {weekStatus === "collected" ? (
-          <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-            <CheckIcon className="h-4 w-4" /> Collected
-          </span>
-        ) : weekStatus === "earned" ? (
-          <button onClick={() => setRewards(collectWeekly(weekKey))} className={primaryBtn}>
-            Collect trophy
-          </button>
-        ) : (
-          <span className="text-sm text-slate-500 dark:text-slate-400">
-            {hitDays}/7 days
-          </span>
-        )}
-      </div>
-
-      <div className="mt-3">
-        <ProgressBar done={todayCount} total={dt} />
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Daily target: {dt}/day (from {target}/week)
-        </p>
       </div>
     </section>
   );
