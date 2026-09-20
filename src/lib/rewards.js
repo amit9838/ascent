@@ -3,7 +3,7 @@
 // claimable until collected. State: { daily: { "YYYY-MM-DD": "earned" | "collected" },
 // weekly: { "<monday YYYY-MM-DD>": "earned" | "collected" } }
 
-import { dayCounts, dayKey, weekStart } from "./activity.js";
+import { dayKey, dayPoints, weekStart } from "./activity.js";
 
 const KEY = "dsa-rewards-v1";
 
@@ -47,9 +47,9 @@ export function dailyTarget(weeklyTarget) {
 
 // Marks newly-earned rewards as "earned" (never touches "collected").
 // Returns the full state. `now` override exists for testing.
-export function refreshRewards(done, weeklyTarget, now = new Date()) {
+export function refreshRewards(done, points, weeklyTarget, now = new Date()) {
   const target = dailyTarget(weeklyTarget);
-  const counts = dayCounts(done);
+  const counts = dayPoints(done, points);
   const state = loadState();
   const todayK = dayKey(now);
 

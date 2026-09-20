@@ -1,3 +1,5 @@
+import { pointsOf } from "./points.js";
+
 // Time-based insights derived from the progress map.
 // done = { [workatUrl]: ISO timestamp string | true (legacy, undated) }
 
@@ -26,6 +28,18 @@ export function dayCounts(done) {
   return counts;
 }
 
+// { "YYYY-MM-DD": points } for dated entries only.
+export function dayPoints(done, points = {}) {
+  const map = {};
+  for (const [url, v] of Object.entries(done)) {
+    const t = solvedAt(v);
+    if (t == null) continue;
+    const k = dayKey(new Date(t));
+    map[k] = (map[k] ?? 0) + pointsOf(points, url);
+  }
+  return map;
+}
+
 // Monday 00:00 local of the week containing d.
 export function weekStart(d = new Date()) {
   const c = new Date(d);
@@ -43,13 +57,13 @@ export function weekRangeLabel(d = new Date()) {
   return `${fmt(s)} – ${fmt(e)}`;
 }
 
-export function solvedThisWeek(done, now = new Date()) {
+export function solvedThisWeek(done, points = {}, now = new Date()) {
   const start = weekStart(now).getTime();
   const end = start + 7 * 86400000;
   let n = 0;
-  for (const v of Object.values(done)) {
+  for (const [url, v] of Object.entries(done)) {
     const t = solvedAt(v);
-    if (t != null && t >= start && t < end) n++;
+    if (t != null && t >= start && t < end) n += pointsOf(points, url);
   }
   return n;
 }
@@ -66,18 +80,18 @@ export function currentStreak(done, now = new Date()) {
   return streak;
 }
 
-export function bestDay(done) {
-  const counts = dayCounts(done);
+export function bestDay(done, points = {}) {
+  const map = dayPoints(done, points);
   let best = null;
-  for (const [day, count] of Object.entries(counts)) {
-    if (!best || count > best.count) best = { day, count };
+  for (const [day, pts] of Object.entries(map)) {
+    if (!best || pts > best.points) best = { day, points: pts };
   }
   return best; // null when there are no dated solves
 }
 
 // Last `weeks` Monday–Sunday columns ending with the current week.
-export function heatmapWeeks(done, weeks = 15, now = new Date()) {
-  const counts = dayCounts(done);
+export function heatmapWeeks(done, points = {}, weeks = 15, now = new Date()) {
+  const counts = dayPoints(done, points);
   const start = weekStart(now);
   start.setDate(start.getDate() - (weeks - 1) * 7);
   const todayK = dayKey(now);
@@ -90,7 +104,7 @@ export function heatmapWeeks(done, weeks = 15, now = new Date()) {
       const k = dayKey(d);
       days.push({
         key: k,
-        count: counts[k] ?? 0,
+        points: counts[k] ?? 0,
         future: k > todayK,
         label: d.toLocaleDateString(undefined, {
           month: "short",
