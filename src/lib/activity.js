@@ -7,10 +7,6 @@ export function dayKey(d = new Date()) {
   ).padStart(2, "0")}`;
 }
 
-export function monthKey(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 // ISO timestamp -> epoch ms, or null when the entry has no usable date.
 export function solvedAt(value) {
   if (typeof value !== "string") return null;
