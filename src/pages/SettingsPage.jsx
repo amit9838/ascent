@@ -1,65 +1,48 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { BackIcon, DownloadIcon, TrashIcon, UploadIcon } from "../components/icons.jsx";
+import { BackIcon, DownloadIcon, MoonIcon, SunIcon, TrashIcon, UploadIcon } from "../components/icons.jsx";
+import { applyBackup, exportProfile, parseBackup } from "../lib/profile.js";
 
-function extractEntries(json) {
-  const raw =
-    json && typeof json === "object" && json.done && typeof json.done === "object"
-      ? json.done
-      : json;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const entries = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if (typeof k === "string" && k.startsWith("http") && v) entries[k] = true;
-  }
-  return entries;
-}
-
-export default function SettingsPage({ done, onReplace, onReset }) {
+export default function SettingsPage({ done, onReplace, onReset, theme, setTheme }) {
   const fileRef = useRef(null);
   const [message, setMessage] = useState(null); // { ok, text }
   const solved = Object.keys(done).length;
 
-  const exportProgress = () => {
-    const payload = {
-      app: "dsa-tracker",
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      done,
-    };
+  const exportFile = () => {
+    const payload = exportProfile();
+    const day = new Date().toISOString().slice(0, 10);
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "dsa-progress.json";
+    a.download = `dsa-profile-${day}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setMessage({
-      ok: true,
-      text: `Exported ${solved} solved ${solved === 1 ? "entry" : "entries"} to dsa-progress.json.`,
-    });
   };
 
   const importFile = (file) => {
     const reader = new FileReader();
     reader.onload = () => {
+      let parsed;
       try {
-        const entries = extractEntries(JSON.parse(reader.result));
-        if (!entries) throw new Error("bad format");
-        const fresh = Object.keys(entries).filter((k) => !done[k]);
-        onReplace({ ...done, ...entries });
-        setMessage({
-          ok: true,
-          text: `Imported ${fresh.length} new ${fresh.length === 1 ? "entry" : "entries"} (${solved + fresh.length} total solved).`,
-        });
+        parsed = parseBackup(JSON.parse(reader.result));
       } catch {
         setMessage({
           ok: false,
-          text: "Could not import: not a valid dsa-progress.json file.",
+          text: "Could not import: not a valid backup file.",
         });
+        return;
       }
+      if (
+        !window.confirm(
+          "Restore this backup? Progress merges in; notes, goals, rewards, theme and question-of-day will be replaced, then the app reloads."
+        )
+      )
+        return;
+      onReplace(applyBackup(parsed, done));
+      window.location.reload();
     };
     reader.onerror = () =>
       setMessage({ ok: false, text: "Could not read the selected file." });
@@ -77,22 +60,51 @@ export default function SettingsPage({ done, onReplace, onReset }) {
       </p>
 
       <section className="mt-6 max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <h2 className="text-lg font-semibold">Progress data</h2>
+        <h2 className="text-lg font-semibold">Appearance</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Defaults to your system preference.
+        </p>
+        <div className="mt-3 inline-flex rounded-lg border border-slate-300 p-1 dark:border-slate-600">
+          <button
+            onClick={() => setTheme("light")}
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium ${
+              theme === "light"
+                ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+            }`}
+          >
+            <SunIcon className="h-4 w-4" /> Light
+          </button>
+          <button
+            onClick={() => setTheme("dark")}
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium ${
+              theme === "dark"
+                ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+            }`}
+          >
+            <MoonIcon className="h-4 w-4" /> Dark
+          </button>
+        </div>
+      </section>
+
+      <section className="mt-6 max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="text-lg font-semibold">Backup & restore</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {solved} {solved === 1 ? "problem" : "problems"} marked as solved.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button
-            onClick={exportProgress}
+            onClick={exportFile}
             className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
           >
-            <DownloadIcon className="h-4 w-4" /> Export JSON
+            <DownloadIcon className="h-4 w-4" /> Export profile
           </button>
           <button
             onClick={() => fileRef.current?.click()}
             className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
-            <UploadIcon className="h-4 w-4" /> Import JSON
+            <UploadIcon className="h-4 w-4" /> Import profile
           </button>
           <input
             ref={fileRef}
@@ -111,8 +123,9 @@ export default function SettingsPage({ done, onReplace, onReset }) {
           </p>
         )}
         <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          Import merges: entries from the file are added to your current
-          progress, nothing is removed.
+          Backs up progress, notes, goals, rewards, theme and question-of-day.
+          Importing merges progress and replaces the rest, then reloads.
+          Old progress-only backups still import.
         </p>
       </section>
 
