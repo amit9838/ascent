@@ -134,7 +134,7 @@ function TrophyShelf({ done, solved, total, perfectWeeks }) {
   );
 }
 
-export default function ProfilePage({ done }) {
+export default function ProgressPage({ done }) {
   const [data, setData] = useState(null); // { slug: rows[] }
   const pointsMap = useMemo(() => buildPointsMap(data), [data]);
   const [rewards, setRewards] = useState(() =>
@@ -207,7 +207,7 @@ export default function ProfilePage({ done }) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Progress</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Your progress and reward collection.
         </p>
