@@ -36,8 +36,15 @@ export default function TopicsPage({ done }) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Topics</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {data ? `${solved} of ${total} problems solved` : "Loading progress…"}
+          {data
+            ? `${solved} of ${total} problems solved · ${Math.round((solved / total) * 100)}%`
+            : "Loading progress…"}
         </p>
+        {data && total > 0 && (
+          <div className="mt-3 max-w-md">
+            <ProgressBar done={solved} total={total} />
+          </div>
+        )}
       </div>
 
       {error && (
@@ -47,18 +54,45 @@ export default function TopicsPage({ done }) {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {TOPICS.map((t, i) => {
+        {TOPICS.map((t) => {
           const rows = data?.[t.slug] ?? [];
           const s = solvedIn(rows);
+          const Icon = t.icon;
+          const complete = rows.length > 0 && s >= rows.length;
+          const diffs = { easy: 0, medium: 0, hard: 0 };
+          for (const r of rows) {
+            const d = (r[F.difficulty] || "").toLowerCase();
+            if (d in diffs) diffs[d]++;
+          }
+          const pct = rows.length ? Math.round((s / rows.length) * 100) : 0;
           return (
             <div
               key={t.slug}
-              className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+              className={`rounded-xl border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:bg-slate-900 ${
+                complete
+                  ? "border-emerald-400 dark:border-emerald-700"
+                  : "border-slate-200 dark:border-slate-700"
+              }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-medium text-slate-400">#{i + 1}</p>
-                  <h2 className="text-lg font-semibold">{t.name}</h2>
+              <div className="flex items-center gap-3">
+                <span className={`shrink-0 rounded-lg p-2 ${t.chip}`}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-base font-semibold" title={t.name}>
+                    {t.name}
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {complete ? (
+                      <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                        Completed · {s}/{rows.length}
+                      </span>
+                    ) : (
+                      <span>
+                        {s}/{rows.length} solved · {pct}%
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <a
                   href={workatTopicUrl(t.slug)}
@@ -70,21 +104,36 @@ export default function TopicsPage({ done }) {
                   <ExternalIcon className="h-4 w-4" />
                 </a>
               </div>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {data ? `${rows.length} problems` : "…"}
-              </p>
               <div className="mt-3">
                 <ProgressBar done={s} total={rows.length} />
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  {s}/{rows.length} solved
-                </p>
               </div>
-              <Link
-                to={`/topic/${t.slug}`}
-                className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-              >
-                Open questions <ArrowRightIcon className="h-4 w-4" />
-              </Link>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                {rows.length > 0 && (
+                  <div
+                    className="flex h-2 w-[30%] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                    title={`${diffs.easy} easy · ${diffs.medium} medium · ${diffs.hard} hard`}
+                  >
+                    <div
+                      className="h-full bg-emerald-500/70"
+                      style={{ width: `${(diffs.easy / rows.length) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-amber-500/70"
+                      style={{ width: `${(diffs.medium / rows.length) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-rose-500/70"
+                      style={{ width: `${(diffs.hard / rows.length) * 100}%` }}
+                    />
+                  </div>
+                )}
+                <Link
+                  to={`/topic/${t.slug}`}
+                  className="flex shrink-0 items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Open <ArrowRightIcon className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           );
         })}
