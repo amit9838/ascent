@@ -61,3 +61,24 @@ export function pickQuestionOfTheDay(problems, todayOverride) {
   }
   return { ...pick, id, date: today, dateLabel: todayLabel() };
 }
+
+const IGNORED_KEY = "dsa-qotd-ignored-v1";
+
+export function loadIgnored() {
+  try {
+    const v = JSON.parse(localStorage.getItem(IGNORED_KEY));
+    if (v && typeof v.date === "string" && typeof v.id === "string") return v;
+  } catch {
+    // fall through to null
+  }
+  return null;
+}
+
+export function saveIgnored(entry) {
+  try {
+    if (entry) localStorage.setItem(IGNORED_KEY, JSON.stringify(entry));
+    else localStorage.removeItem(IGNORED_KEY);
+  } catch {
+    // storage unavailable — ignore applies for this session only
+  }
+}
