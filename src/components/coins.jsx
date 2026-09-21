@@ -5,6 +5,9 @@
 const STAR_POINTS =
   "32,19 35.2,27.6 44.4,28 37.2,33.7 39.6,42.5 32,37.5 24.4,42.5 26.8,33.7 19.6,28 28.8,27.6";
 
+const STAR_INNER_POINTS =
+  "32,24.9 33.8,29.6 38.8,29.8 34.9,32.9 36.2,37.8 32,35 27.8,37.8 29.1,32.9 25.2,29.8 30.2,29.6";
+
 const SAPPHIRE_STUDS = [
   [57.5, 32],
   [6.5, 32],
@@ -20,22 +23,25 @@ export function GoldCoin({ className = "h-8 w-8" }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       <defs>
-        <radialGradient id="goldcoin-face" cx="38%" cy="30%" r="78%">
-          <stop offset="0%" stopColor="#fffbe0" />
-          <stop offset="38%" stopColor="#ffe977" />
-          <stop offset="68%" stopColor="#f7b731" />
-          <stop offset="88%" stopColor="#d97f06" />
+        <radialGradient id="goldcoin-face" cx="40%" cy="28%" r="80%">
+          <stop offset="0%" stopColor="#fffce8" />
+          <stop offset="30%" stopColor="#ffefa8" />
+          <stop offset="55%" stopColor="#ffd94d" />
+          <stop offset="78%" stopColor="#f0a01e" />
+          <stop offset="92%" stopColor="#c07f0a" />
           <stop offset="100%" stopColor="#9a5200" />
         </radialGradient>
         <linearGradient id="goldcoin-rim" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fff3c2" />
-          <stop offset="45%" stopColor="#f3c53d" />
-          <stop offset="78%" stopColor="#c07f0a" />
+          <stop offset="0%" stopColor="#fff6cf" />
+          <stop offset="35%" stopColor="#f7d54a" />
+          <stop offset="65%" stopColor="#dd9a12" />
+          <stop offset="85%" stopColor="#a86e0c" />
           <stop offset="100%" stopColor="#7c5208" />
         </linearGradient>
         <linearGradient id="goldcoin-star" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffef9e" />
-          <stop offset="100%" stopColor="#f5b301" />
+          <stop offset="0%" stopColor="#fff7c4" />
+          <stop offset="55%" stopColor="#ffdf5e" />
+          <stop offset="100%" stopColor="#eda200" />
         </linearGradient>
       </defs>
       <circle cx="32" cy="32" r="31" fill="#6e4204" />
@@ -56,6 +62,15 @@ export function GoldCoin({ className = "h-8 w-8" }) {
         r="28.5"
         fill="none"
         stroke="#4a2d02"
+        strokeWidth="1"
+        opacity="0.5"
+      />
+      <circle
+        cx="32"
+        cy="32"
+        r="27"
+        fill="none"
+        stroke="#ffedb0"
         strokeWidth="1"
         opacity="0.5"
       />
@@ -99,6 +114,22 @@ export function GoldCoin({ className = "h-8 w-8" }) {
         strokeWidth="1"
         strokeLinejoin="round"
       />
+      <polygon
+        points={STAR_INNER_POINTS}
+        fill="none"
+        stroke="#ffedb0"
+        strokeWidth="0.8"
+        opacity="0.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 12.8 25 A 20.5 20.5 0 0 0 25 12.8"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.4"
+      />
       <ellipse
         cx="24"
         cy="19"
@@ -106,7 +137,7 @@ export function GoldCoin({ className = "h-8 w-8" }) {
         ry="5.5"
         transform="rotate(-25 24 19)"
         fill="#ffffff"
-        opacity="0.4"
+        opacity="0.35"
       />
       <circle cx="42" cy="43" r="3" fill="#ffffff" opacity="0.25" />
     </svg>
@@ -117,18 +148,20 @@ export function SapphireCoin({ className = "h-8 w-8" }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
       <defs>
-        <radialGradient id="sapphirecoin-face" cx="38%" cy="30%" r="78%">
-          <stop offset="0%" stopColor="#f1eaff" />
-          <stop offset="38%" stopColor="#b9a5f5" />
-          <stop offset="68%" stopColor="#7c5ce0" />
-          <stop offset="88%" stopColor="#4c2fb3" />
-          <stop offset="100%" stopColor="#2e1a72" />
+        <radialGradient id="sapphirecoin-face" cx="40%" cy="28%" r="80%">
+          <stop offset="0%" stopColor="#f6f0ff" />
+          <stop offset="30%" stopColor="#c9b3f7" />
+          <stop offset="55%" stopColor="#8f6ff0" />
+          <stop offset="78%" stopColor="#5b36c4" />
+          <stop offset="92%" stopColor="#3d2278" />
+          <stop offset="100%" stopColor="#241257" />
         </radialGradient>
         <linearGradient id="sapphirecoin-rim" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#e6dcff" />
-          <stop offset="45%" stopColor="#a78bfa" />
-          <stop offset="78%" stopColor="#6d3fd4" />
-          <stop offset="100%" stopColor="#3d2278" />
+          <stop offset="0%" stopColor="#ece4ff" />
+          <stop offset="35%" stopColor="#b79af5" />
+          <stop offset="65%" stopColor="#7f56dd" />
+          <stop offset="85%" stopColor="#552fa5" />
+          <stop offset="100%" stopColor="#2a1656" />
         </linearGradient>
       </defs>
       <circle cx="32" cy="32" r="31" fill="#2a1656" />
@@ -149,6 +182,15 @@ export function SapphireCoin({ className = "h-8 w-8" }) {
         r="28.5"
         fill="none"
         stroke="#1c0e3c"
+        strokeWidth="1"
+        opacity="0.5"
+      />
+      <circle
+        cx="32"
+        cy="32"
+        r="27"
+        fill="none"
+        stroke="#e6dcff"
         strokeWidth="1"
         opacity="0.5"
       />
@@ -213,6 +255,26 @@ export function SapphireCoin({ className = "h-8 w-8" }) {
         <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
         <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
       </g>
+      <g
+        transform="translate(32 33) scale(1.35) translate(-12 -11.5)"
+        fill="none"
+        stroke="#d9c8ff"
+        strokeWidth="0.9"
+        strokeLinecap="round"
+        opacity="0.85"
+      >
+        <path d="M16.5 3.5H7.5V9a4.5 4.5 0 0 0 9 0V3.5Z" />
+      </g>
+      <path
+        d="M17 29.8 L17.6 31.4 L19.2 32 L17.6 32.6 L17 34.2 L16.4 32.6 L14.8 32 L16.4 31.4 Z"
+        fill="#f3e8ff"
+        opacity="0.9"
+      />
+      <path
+        d="M47 29.8 L47.6 31.4 L49.2 32 L47.6 32.6 L47 34.2 L46.4 32.6 L44.8 32 L46.4 31.4 Z"
+        fill="#f3e8ff"
+        opacity="0.9"
+      />
       <ellipse
         cx="24"
         cy="19"
