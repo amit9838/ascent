@@ -18,6 +18,7 @@ import {
 } from "../lib/titles.js";
 import { CheckIcon, FlameIcon, StarIcon, TrophyIcon } from "../components/icons.jsx";
 import { ProgressBar } from "../components/ui.jsx";
+import { CoinStack } from "../components/CoinStack.jsx";
 import { GoldCoin, SapphireCoin } from "../components/coins.jsx";
 
 function fmtFull(key /* YYYY-MM-DD, parsed without timezone shift */) {
@@ -214,30 +215,39 @@ export default function ProgressPage({ done }) {
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <div className="flex items-center gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <GoldCoin className="h-20 w-20 shrink-0 drop-shadow-lg" />
-          <div>
-            <p className="text-3xl font-bold">× {stars}</p>
-            <p className="mt-1 text-sm font-medium">Daybreak Stars</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="relative flex items-center gap-5 overflow-hidden rounded-xl border border-amber-200/40 bg-gradient-to-br from-amber-50 via-white to-orange-100/60 p-5 shadow-sm dark:border-amber-900/30 dark:from-amber-950/50 dark:via-slate-900 dark:to-slate-900">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-amber-300/40 blur-2xl dark:bg-amber-500/10" />
+          <CoinStack coin={GoldCoin} count={stars} />
+          <div className="relative">
+            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+              Daybreak Stars
+            </p>
+            <p className="mt-0.5 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              × {stars}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               claimed by hitting the daily target
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <SapphireCoin className="h-20 w-20 shrink-0 drop-shadow-lg" />
-          <div>
-            <p className="text-3xl font-bold">× {trophies}</p>
-            <p className="mt-1 text-sm font-medium">Sapphire Crowns</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="relative flex items-center gap-5 overflow-hidden rounded-xl border border-violet-200/40 bg-gradient-to-br from-violet-50 via-white to-purple-100/60 p-5 shadow-sm dark:border-violet-900/30 dark:from-violet-950/50 dark:via-slate-900 dark:to-slate-900">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-violet-300/40 blur-2xl dark:bg-violet-500/10" />
+          <CoinStack coin={SapphireCoin} count={trophies} />
+          <div className="relative">
+            <p className="text-xs font-semibold uppercase tracking-widest text-violet-700 dark:text-violet-400">
+              Sapphire Crowns
+            </p>
+            <p className="mt-0.5 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              × {trophies}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               claimed with perfect 7-day weeks
             </p>
           </div>
         </div>
       </div>
 
-      {data ? (
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center gap-3">
             <span className="shrink-0 rounded-lg bg-amber-100 p-2 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
               <TrophyIcon className="h-5 w-5" />
@@ -270,7 +280,7 @@ export default function ProgressPage({ done }) {
             </div>
           </div>
         </section>
-      ) : null}
+      
 
       {data ? (
         <TrophyShelf
