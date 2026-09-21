@@ -7,7 +7,7 @@ import TopicsPage from "./pages/TopicsPage.jsx";
 import ProgressPage from "./pages/ProgressPage.jsx";
 import { useProgress } from "./lib/progress.js";
 import { useTheme } from "./lib/theme.js";
-import { ChartIcon, GridIcon, MountainIcon, NotesIcon, SettingsIcon } from "./components/icons.jsx";
+import { ChartIcon, ChevronsUpIcon, GridIcon, NotesIcon, SettingsIcon } from "./components/icons.jsx";
 
 // HashRouter is required for gh-pages: static hosting has no URL
 // rewrites, so deep links only work with hash-based routing.
@@ -22,9 +22,9 @@ export default function App() {
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
             <div className="flex items-center gap-5">
               <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-                <span className="rounded-lg bg-gradient-to-br from-amber-400 to-violet-600 p-1.5 text-white shadow-sm">
-                  <MountainIcon className="h-4 w-4" />
-                </span>
+              <span className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 text-white shadow-sm">
+                <ChevronsUpIcon className="h-4 w-4" />
+              </span>
                 Ascent
               </Link>
               <Link to="/notes" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
