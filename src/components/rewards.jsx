@@ -1,21 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { dayKey, dayPoints, weekStart } from "../lib/activity.js";
-import {
-  collectDaily,
-  collectWeekly,
-  dailyTarget,
-  refreshRewards,
-} from "../lib/rewards.js";
+import { dailyTarget, refreshRewards } from "../lib/rewards.js";
 import { getWeeklyTarget } from "../lib/plans.js";
-import { CheckIcon, GiftIcon } from "./icons.jsx";
+import { CheckIcon, GiftIcon , ArrowRightIcon} from "./icons.jsx";
 import { GoldCoin, SapphireCoin } from "./coins.jsx";
+
 
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900";
-const primaryBtn =
-  "rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white";
-
 export function RewardsCard({ done, points }) {
   const target = getWeeklyTarget();
   const dt = dailyTarget(target);
@@ -66,7 +59,9 @@ export function RewardsCard({ done, points }) {
           to="/progress"
           className="text-sm text-blue-600 hover:underline dark:text-blue-400"
         >
-          View treasury
+          <span className="flex items-center">
+            View Progress &nbsp;<ArrowRightIcon className="h-4 w-4" />
+          </span>
         </Link>
       </div>
 
@@ -74,8 +69,8 @@ export function RewardsCard({ done, points }) {
         <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/60">
           <div className="flex items-center gap-3">
             <GoldCoin
-              className={`h-12 w-12 shrink-0 drop-shadow-md ${todayStatus ? "" : "grayscale opacity-50"}`}
-            />
+            className={`h-11 w-11 shrink-0 drop-shadow-md ${todayStatus ? "" : "grayscale opacity-50"}`}
+          />
             <div className="min-w-0">
               <p className="text-sm font-semibold">Daybreak Star</p>
               <p className="text-2xl font-bold leading-tight">
@@ -94,15 +89,11 @@ export function RewardsCard({ done, points }) {
           </div>
           <div className="mt-2 min-h-7 text-sm">
             {todayStatus === "collected" ? (
-              <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                 <CheckIcon className="h-4 w-4" /> Collected
               </span>
-            ) : todayStatus === "earned" ? (
-              <button onClick={() => setRewards(collectDaily(todayK))} className={primaryBtn}>
-                Claim
-              </button>
             ) : (
-              <span className="text-slate-500 dark:text-slate-400">
+              <span className="text-sm text-slate-500 dark:text-slate-400">
                 {dt - todayCount} more to go
               </span>
             )}
@@ -112,8 +103,8 @@ export function RewardsCard({ done, points }) {
         <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/60">
           <div className="flex items-center gap-3">
             <SapphireCoin
-              className={`h-12 w-12 shrink-0 drop-shadow-md ${weekStatus ? "" : "grayscale opacity-50"}`}
-            />
+            className={`h-11 w-11 shrink-0 drop-shadow-md ${weekStatus ? "" : "grayscale opacity-50"}`}
+          />
             <div className="min-w-0">
               <p className="text-sm font-semibold">Sapphire Crown</p>
               <p className="text-2xl font-bold leading-tight">
@@ -149,15 +140,11 @@ export function RewardsCard({ done, points }) {
           </div>
           <div className="mt-2 min-h-7 text-sm">
             {weekStatus === "collected" ? (
-              <span className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                 <CheckIcon className="h-4 w-4" /> Collected
               </span>
-            ) : weekStatus === "earned" ? (
-              <button onClick={() => setRewards(collectWeekly(weekKey))} className={primaryBtn}>
-                Claim
-              </button>
             ) : (
-              <span className="text-slate-500 dark:text-slate-400">Win all 7 days</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Win all 7 days</span>
             )}
           </div>
         </div>
