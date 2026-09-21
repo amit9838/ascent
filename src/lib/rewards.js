@@ -47,6 +47,8 @@ export function dailyTarget(weeklyTarget) {
 
 // Marks newly-earned rewards as "earned" (never touches "collected").
 // Returns the full state. `now` override exists for testing.
+// Rewards auto-collect: anything earned (now or previously) is stored as
+// "collected" — there is no manual claim step.
 export function refreshRewards(done, points, weeklyTarget, now = new Date()) {
   const target = dailyTarget(weeklyTarget);
   const counts = dayPoints(done, points);
@@ -101,3 +103,13 @@ export function collectWeekly(weekKey) {
   }
   return s;
 }
+
+export function resetRewards() {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // nothing to clear
+  }
+}
+
+

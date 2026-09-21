@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { resetRewards } from "./rewards.js";
 
 const KEY = "dsa-progress-v1";
 
@@ -32,6 +33,7 @@ export function useProgress() {
   const reset = () => {
     setDone({});
     saveProgress({});
+    resetRewards();
   };
 
   const replaceAll = (map) => {
