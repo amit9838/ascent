@@ -343,6 +343,23 @@ export function MountainIcon({ className }) {
   );
 }
 
+export function ChevronsUpIcon({ className }) {
+  return (
+    <Svg className={className}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m17 11-5-5-5 5"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m17 18-5-5-5 5"
+      />
+    </Svg>
+  );
+}
+
 export function ChartIcon({ className }) {
   return (
     <Svg className={className}>
