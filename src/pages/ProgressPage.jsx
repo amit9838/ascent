@@ -37,8 +37,6 @@ function fmtWeek(mondayKey) {
   return `${f(new Date(y, m - 1, d))} – ${f(new Date(y, m - 1, d + 6))}`;
 }
 
-const collectBtn =
-  "shrink-0 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white";
 const stepper =
   "rounded-md border border-slate-300 px-2 py-0.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800";
 
@@ -377,7 +375,7 @@ export default function ProgressPage({ done }) {
                   ) : (
                     <button
                       onClick={() => setRewards(collectDaily(day))}
-                      className={collectBtn}
+                      className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                     >
                       Claim
                     </button>
@@ -412,7 +410,7 @@ export default function ProgressPage({ done }) {
                   ) : (
                     <button
                       onClick={() => setRewards(collectWeekly(wk))}
-                      className={collectBtn}
+                      className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                     >
                       Claim
                     </button>
