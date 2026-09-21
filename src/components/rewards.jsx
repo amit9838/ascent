@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { dayKey, dayPoints, weekStart } from "../lib/activity.js";
-import { dailyTarget, refreshRewards } from "../lib/rewards.js";
+import {
+  collectDaily,
+  collectWeekly,
+  dailyTarget,
+  refreshRewards,
+} from "../lib/rewards.js";
 import { getWeeklyTarget } from "../lib/plans.js";
 import { CheckIcon, GiftIcon , ArrowRightIcon} from "./icons.jsx";
 import { GoldCoin, SapphireCoin } from "./coins.jsx";
 
+
+const primaryBtn =
+  "rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white";
 
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900";
@@ -92,6 +100,10 @@ export function RewardsCard({ done, points }) {
               <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                 <CheckIcon className="h-4 w-4" /> Collected
               </span>
+            ) : todayStatus === "earned" ? (
+              <button onClick={() => setRewards(collectDaily(todayK))} className={primaryBtn}>
+                Claim
+              </button>
             ) : (
               <span className="text-sm text-slate-500 dark:text-slate-400">
                 {dt - todayCount} more to go
@@ -143,6 +155,10 @@ export function RewardsCard({ done, points }) {
               <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                 <CheckIcon className="h-4 w-4" /> Collected
               </span>
+            ) : weekStatus === "earned" ? (
+              <button onClick={() => setRewards(collectWeekly(weekKey))} className={primaryBtn}>
+                Claim
+              </button>
             ) : (
               <span className="text-sm text-slate-500 dark:text-slate-400">Win all 7 days</span>
             )}
