@@ -12,7 +12,7 @@ import { ChartIcon, ChevronsUpIcon, GridIcon, NotesIcon, SettingsIcon } from "./
 // HashRouter is required for gh-pages: static hosting has no URL
 // rewrites, so deep links only work with hash-based routing.
 export default function App() {
-  const { done, toggle, reset, replaceAll } = useProgress();
+  const { done, ready, toggle, reset, replaceAll } = useProgress();
   const { theme, setTheme } = useTheme();
 
   return (
@@ -49,6 +49,11 @@ export default function App() {
           </div>
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6">
+          {!ready || done === null ? (
+            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+              Loading your progress…
+            </p>
+          ) : (
           <Routes>
             <Route path="/" element={<HomePage done={done} onToggle={toggle} />} />
             <Route path="/topic/:slug" element={<TopicPage done={done} onToggle={toggle} />} />
@@ -61,6 +66,7 @@ export default function App() {
             <Route path="/progress" element={<ProgressPage done={done} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          )}
         </main>
       </div>
     </HashRouter>

@@ -1,16 +1,15 @@
-// Central storage layer for the app.
+// Central storage layer for the app, backed by IndexedDB.
 //
-// Today this is backed by localStorage (sync). All feature modules
-// (progress, plans, rewards, qotd, notes, theme, profile) must go through
-// this file instead of touching localStorage directly.
+// All feature modules (progress, plans, rewards, qotd, notes, theme,
+// profile) must go through this file. Keys are stable for backward
+// compatibility with exported backup files.
 //
-// Why: when we migrate to IndexedDB (async) in the future, only this file's
-// internals need to change — callers keep the same key names. At that point
-// the sync API here will become async (promises) and callers will need to
-// `await` reads/writes.
+// Backend: one database ("ascent-db", v1) with a single object store
+// ("kv") holding key -> value pairs (out-of-line keys). Raw-text values
+// (notes, theme) are stored as strings; everything else is stored as
+// structured-cloneable JSON values.
 //
-// Keys are kept stable for backward compatibility with existing browsers
-// and exported backup files.
+// NOTE: every function here is async — callers must `await` reads/writes.
 
 export const KEYS = {
   progress: "dsa-progress-v1",
@@ -22,49 +21,111 @@ export const KEYS = {
   qotdIgnored: "dsa-qotd-ignored-v1",
 };
 
-// Raw string access (for notes/theme, which store plain text).
+const DB_NAME = "ascent-db";
+const STORE_NAME = "kv";
+const DB_VERSION = 1;
 
-export function getItem(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
+let dbPromise = null;
+
+function openDb() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve) => {
+    let req;
+    try {
+      req = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch {
+      resolve(null);
+      return;
+    }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
+  });
+  return dbPromise;
 }
 
-export function setItem(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // storage unavailable (private mode / quota) — caller keeps in-memory state
-  }
+async function idbGet(key) {
+  const db = await openDb();
+  if (!db) return undefined;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(undefined);
+    } catch {
+      resolve(undefined);
+    }
+  });
 }
 
-export function removeItem(key) {
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    // nothing to clear
-  }
+async function idbSet(key, value) {
+  const db = await openDb();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const req = tx.objectStore(STORE_NAME).put(value, key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
 }
 
-// JSON object access (for progress, plans, rewards, qotd).
-
-export function getJSON(key, fallback = null) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw == null) return fallback;
-    const parsed = JSON.parse(raw);
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
+async function idbDel(key) {
+  const db = await openDb();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const req = tx.objectStore(STORE_NAME).delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
 }
 
-export function setJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // storage unavailable — value applies for this session only
+// --- public API ---
+
+// Raw string access (notes, theme).
+export async function getItem(key) {
+  const v = await idbGet(key);
+  if (typeof v === "string") return v;
+  if (v == null) return null;
+  return String(v);
+}
+
+export async function setItem(key, value) {
+  await idbSet(key, String(value));
+}
+
+export async function removeItem(key) {
+  await idbDel(key);
+}
+
+// JSON object access (progress, plans, rewards, qotd).
+export async function getJSON(key, fallback = null) {
+  const v = await idbGet(key);
+  if (v === undefined || v === null) return fallback;
+  if (typeof v === "string") {
+    try {
+      return JSON.parse(v) ?? fallback;
+    } catch {
+      return fallback;
+    }
   }
+  return v;
+}
+
+export async function setJSON(key, value) {
+  await idbSet(key, value);
 }
