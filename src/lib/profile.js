@@ -9,7 +9,8 @@ const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 export async function exportProfile() {
   const data = {};
   for (const [name, key] of Object.entries(KEYS)) {
-    if (name === "qotdIgnored") continue; // internal only, not part of backups
+    // qotdIgnored + cloudMeta are internal/local-only, not part of backups
+    if (name === "qotdIgnored" || name === "cloudMeta") continue;
     // notes/theme are stored as raw text, everything else as JSON
     if (name === "notes" || name === "theme") {
       const raw = await getItem(key);

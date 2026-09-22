@@ -2,7 +2,7 @@
 // Shape: { weeklyTarget: number, months: { "YYYY-MM": [topicSlug, ...] } }
 
 import { useEffect, useState } from "react";
-import { KEYS, getJSON, setJSON } from "./db.js";
+import { KEYS, getJSON, setJSON, subscribe } from "./db.js";
 
 export const DEFAULT_WEEKLY_TARGET = 21;
 
@@ -27,7 +27,8 @@ export async function setWeeklyTarget(n) {
   await save(v);
 }
 
-// React binding: loads the stored target once, persists changes.
+// React binding: loads the stored target once, persists changes, and
+// follows cloud-synced updates via db.js events.
 export function useWeeklyTarget() {
   const [target, setTargetState] = useState(DEFAULT_WEEKLY_TARGET);
   const [ready, setReady] = useState(false);
@@ -44,6 +45,15 @@ export function useWeeklyTarget() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(
+    () =>
+      subscribe((key) => {
+        if (key !== KEYS.plans) return;
+        getWeeklyTarget().then((t) => setTargetState(t));
+      }),
+    []
+  );
 
   const setTarget = async (n) => {
     setTargetState(n);

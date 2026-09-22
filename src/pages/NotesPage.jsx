@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BackIcon, DownloadIcon, TrashIcon } from "../components/icons.jsx";
-import { KEYS, getItem, setItem } from "../lib/db.js";
+import { KEYS, getItem, setItem, subscribe } from "../lib/db.js";
 
 export default function NotesPage() {
   const [text, setText] = useState(null); // null = loading from IndexedDB
   const [savedAt, setSavedAt] = useState(null);
+  const dirtyUntil = useRef(0); // timestamp until which local edits are unsaved
 
   useEffect(() => {
     let cancelled = false;
@@ -22,10 +23,26 @@ export default function NotesPage() {
   useEffect(() => {
     if (text === null) return;
     const t = setTimeout(() => {
+      dirtyUntil.current = 0;
       setItem(KEYS.notes, text).then(() => setSavedAt(new Date()));
     }, 500);
     return () => clearTimeout(t);
   }, [text]);
+
+  // Cloud-synced notes: apply only when no unsaved local edits (the sync
+  // engine's typing guard and this check together prevent clobbering).
+  useEffect(() =>
+    subscribe((key, source) => {
+      if (key !== KEYS.notes || source !== "remote") return;
+      if (Date.now() < dirtyUntil.current) return;
+      getItem(KEYS.notes).then((v) => setText(v ?? ""));
+    })
+  );
+
+  const onChange = (e) => {
+    dirtyUntil.current = Date.now() + 2500;
+    setText(e.target.value);
+  };
 
   const lines = !text ? 0 : text.split("\n").length;
 
@@ -83,7 +100,7 @@ export default function NotesPage() {
       </div>
       <textarea
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={onChange}
         placeholder="Write anything — approaches, tricks, problems to revisit…"
         spellCheck={false}
         className="mt-4 min-h-[60vh] w-full rounded-xl border border-slate-300 bg-white p-4 font-mono text-sm outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"

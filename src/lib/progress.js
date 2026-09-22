@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { resetRewards } from "./rewards.js";
-import { KEYS, getJSON, setJSON } from "./db.js";
+import { KEYS, getJSON, setJSON, subscribe } from "./db.js";
 
 export async function loadProgress() {
   return (await getJSON(KEYS.progress, {})) ?? {};
@@ -12,6 +12,7 @@ export async function saveProgress(map) {
 
 // done = { [workatProblemUrl]: ISO timestamp | true (legacy) }
 // done starts as null until IndexedDB finishes loading; App gates on `ready`.
+// Subscribes to db.js events so cloud-synced changes update the UI live.
 export function useProgress() {
   const [done, setDone] = useState(null);
   const [ready, setReady] = useState(false);
@@ -28,6 +29,15 @@ export function useProgress() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(
+    () =>
+      subscribe((key) => {
+        if (key !== KEYS.progress) return;
+        loadProgress().then((m) => setDone(m ?? {}));
+      }),
+    []
+  );
 
   const toggle = useCallback((id) => {
     setDone((prev) => {
