@@ -6,8 +6,8 @@
 import { dayKey, dayPoints, weekStart } from "./activity.js";
 import { KEYS, getJSON, setJSON, removeItem } from "./db.js";
 
-function loadState() {
-  const v = getJSON(KEYS.rewards, null);
+async function loadState() {
+  const v = await getJSON(KEYS.rewards, null);
   if (v && typeof v === "object") {
     return {
       daily:
@@ -23,8 +23,8 @@ function loadState() {
   return { daily: {}, weekly: {} };
 }
 
-function saveState(s) {
-  setJSON(KEYS.rewards, s);
+async function saveState(s) {
+  await setJSON(KEYS.rewards, s);
 }
 
 function parseDay(key /* YYYY-MM-DD, noon local to avoid TZ shifts */) {
@@ -40,10 +40,10 @@ export function dailyTarget(weeklyTarget) {
 // Returns the full state. `now` override exists for testing.
 // Rewards auto-collect: anything earned (now or previously) is stored as
 // "collected" — there is no manual claim step.
-export function refreshRewards(done, points, weeklyTarget, now = new Date()) {
+export async function refreshRewards(done, points, weeklyTarget, now = new Date()) {
   const target = dailyTarget(weeklyTarget);
   const counts = dayPoints(done, points);
-  const state = loadState();
+  const state = await loadState();
   const todayK = dayKey(now);
 
   for (const [day, n] of Object.entries(counts)) {
@@ -73,30 +73,28 @@ export function refreshRewards(done, points, weeklyTarget, now = new Date()) {
     }
   }
 
-  saveState(state);
+  await saveState(state);
   return state;
 }
 
-export function collectDaily(dayKeyStr) {
-  const s = loadState();
+export async function collectDaily(dayKeyStr) {
+  const s = await loadState();
   if (s.daily[dayKeyStr] === "earned") {
     s.daily[dayKeyStr] = "collected";
-    saveState(s);
+    await saveState(s);
   }
   return s;
 }
 
-export function collectWeekly(weekKey) {
-  const s = loadState();
+export async function collectWeekly(weekKey) {
+  const s = await loadState();
   if (s.weekly[weekKey] === "earned") {
     s.weekly[weekKey] = "collected";
-    saveState(s);
+    await saveState(s);
   }
   return s;
 }
 
-export function resetRewards() {
-  removeItem(KEYS.rewards);
+export async function resetRewards() {
+  await removeItem(KEYS.rewards);
 }
-
-

@@ -1,25 +1,54 @@
-// Weekly target + monthly topic plans, persisted via src/lib/db.js.
+// Weekly target + monthly topic plans, persisted via src/lib/db.js (IndexedDB).
 // Shape: { weeklyTarget: number, months: { "YYYY-MM": [topicSlug, ...] } }
 
+import { useEffect, useState } from "react";
 import { KEYS, getJSON, setJSON } from "./db.js";
 
-function load() {
-  const v = getJSON(KEYS.plans, {});
+export const DEFAULT_WEEKLY_TARGET = 21;
+
+async function load() {
+  const v = await getJSON(KEYS.plans, {});
   if (v && typeof v === "object" && !Array.isArray(v)) return v;
   return {};
 }
 
-function save(v) {
-  setJSON(KEYS.plans, v);
+async function save(v) {
+  await setJSON(KEYS.plans, v);
 }
 
-export function getWeeklyTarget() {
-  const v = load().weeklyTarget;
-  return Number.isInteger(v) && v > 0 ? v : 21;
+export async function getWeeklyTarget() {
+  const v = (await load()).weeklyTarget;
+  return Number.isInteger(v) && v > 0 ? v : DEFAULT_WEEKLY_TARGET;
 }
 
-export function setWeeklyTarget(n) {
-  const v = load();
+export async function setWeeklyTarget(n) {
+  const v = await load();
   v.weeklyTarget = n;
-  save(v);
+  await save(v);
+}
+
+// React binding: loads the stored target once, persists changes.
+export function useWeeklyTarget() {
+  const [target, setTargetState] = useState(DEFAULT_WEEKLY_TARGET);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getWeeklyTarget().then((t) => {
+      if (!cancelled) {
+        setTargetState(t);
+        setReady(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const setTarget = async (n) => {
+    setTargetState(n);
+    await setWeeklyTarget(n);
+  };
+
+  return [target, setTarget, ready];
 }

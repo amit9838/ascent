@@ -7,7 +7,7 @@ import {
   dailyTarget,
   refreshRewards,
 } from "../lib/rewards.js";
-import { getWeeklyTarget } from "../lib/plans.js";
+import { useWeeklyTarget } from "../lib/plans.js";
 import { CheckIcon, GiftIcon , ArrowRightIcon} from "./icons.jsx";
 import { GoldCoin, SapphireCoin } from "./coins.jsx";
 
@@ -18,13 +18,27 @@ const primaryBtn =
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900";
 export function RewardsCard({ done, points }) {
-  const target = getWeeklyTarget();
+  const [target] = useWeeklyTarget();
   const dt = dailyTarget(target);
-  const [rewards, setRewards] = useState(() => refreshRewards(done, points, target));
+  const [rewards, setRewards] = useState({ daily: {}, weekly: {} });
 
   useEffect(() => {
-    setRewards(refreshRewards(done, points, target));
+    let cancelled = false;
+    refreshRewards(done, points, target).then((s) => {
+      if (!cancelled) setRewards(s);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [done, points, target]);
+
+  const claimDaily = async (day) => {
+    setRewards(await collectDaily(day));
+  };
+
+  const claimWeekly = async (wk) => {
+    setRewards(await collectWeekly(wk));
+  };
 
   const todayK = dayKey();
   const counts = dayPoints(done, points);
@@ -101,7 +115,7 @@ export function RewardsCard({ done, points }) {
                 <CheckIcon className="h-4 w-4" /> Collected
               </span>
             ) : todayStatus === "earned" ? (
-              <button onClick={() => setRewards(collectDaily(todayK))} className={primaryBtn}>
+              <button onClick={() => claimDaily(todayK)} className={primaryBtn}>
                 Claim
               </button>
             ) : (
@@ -156,7 +170,7 @@ export function RewardsCard({ done, points }) {
                 <CheckIcon className="h-4 w-4" /> Collected
               </span>
             ) : weekStatus === "earned" ? (
-              <button onClick={() => setRewards(collectWeekly(weekKey))} className={primaryBtn}>
+              <button onClick={() => claimWeekly(weekKey)} className={primaryBtn}>
                 Claim
               </button>
             ) : (

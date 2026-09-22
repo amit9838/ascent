@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TOPICS } from "../data/topics.js";
 import { loadTopicCsv, F } from "../lib/csv.js";
 import { buildPointsMap } from "../lib/points.js";
-import { getWeeklyTarget, setWeeklyTarget } from "../lib/plans.js";
+import { useWeeklyTarget } from "../lib/plans.js";
 import {
   collectDaily,
   collectWeekly,
@@ -136,18 +136,27 @@ function TrophyShelf({ done, solved, total, perfectWeeks }) {
 export default function ProgressPage({ done }) {
   const [data, setData] = useState(null); // { slug: rows[] }
   const pointsMap = useMemo(() => buildPointsMap(data), [data]);
-  const [rewards, setRewards] = useState(() =>
-    refreshRewards(done, pointsMap, getWeeklyTarget())
-  );
-  const [target, setTarget] = useState(getWeeklyTarget);
+  const [rewards, setRewards] = useState({ daily: {}, weekly: {} });
+  const [target, setTarget] = useWeeklyTarget();
 
   useEffect(() => {
-    setRewards(refreshRewards(done, pointsMap, getWeeklyTarget()));
+    let cancelled = false;
+    refreshRewards(done, pointsMap, target).then((s) => {
+      if (!cancelled) setRewards(s);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [data, done, pointsMap, target]);
-  const changeTarget = (d) => {
+  const changeTarget = async (d) => {
     const next = Math.min(100, Math.max(1, target + d));
-    setTarget(next);
-    setWeeklyTarget(next);
+    await setTarget(next);
+  };
+  const claimDaily = async (day) => {
+    setRewards(await collectDaily(day));
+  };
+  const claimWeekly = async (wk) => {
+    setRewards(await collectWeekly(wk));
   };
 
   useEffect(() => {
@@ -374,7 +383,7 @@ export default function ProgressPage({ done }) {
                     </span>
                   ) : (
                     <button
-                      onClick={() => setRewards(collectDaily(day))}
+                      onClick={() => claimDaily(day)}
                       className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                     >
                       Claim
@@ -409,7 +418,7 @@ export default function ProgressPage({ done }) {
                     </span>
                   ) : (
                     <button
-                      onClick={() => setRewards(collectWeekly(wk))}
+                      onClick={() => claimWeekly(wk)}
                       className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                     >
                       Claim

@@ -7,7 +7,7 @@ import {
   solvedThisWeek,
   weekRangeLabel,
 } from "../lib/activity.js";
-import { getWeeklyTarget } from "../lib/plans.js";
+import { useWeeklyTarget } from "../lib/plans.js";
 import { dailyTarget } from "../lib/rewards.js";
 import { pointsOf } from "../lib/points.js";
 import {
@@ -60,7 +60,7 @@ export function OverviewRow({ done, points, total, solved }) {
   const streak = currentStreak(done);
   const week = solvedThisWeek(done, points);
   const best = bestDay(done, points);
-  const target = getWeeklyTarget();
+  const [target] = useWeeklyTarget();
   const totalPts = Object.entries(done).reduce(
     (a, [url]) => a + pointsOf(points, url),
     0
@@ -103,7 +103,7 @@ export function OverviewRow({ done, points, total, solved }) {
 }
 
 export function WeeklyGoalCard({ done, points, total, solved }) {
-  const target = getWeeklyTarget();
+  const [target] = useWeeklyTarget();
   const week = solvedThisWeek(done, points);
   const pct = target > 0 ? Math.min(100, Math.round((week / target) * 100)) : 0;
   const dt = dailyTarget(target);
