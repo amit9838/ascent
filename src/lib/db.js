@@ -19,7 +19,35 @@ export const KEYS = {
   theme: "dsa-theme-v1",
   qotd: "dsa-qotd-v1",
   qotdIgnored: "dsa-qotd-ignored-v1",
+  cloudMeta: "dsa-cloud-meta-v1", // local-only sync bookkeeping, never exported/synced
 };
+
+// --- change notification (pub/sub) ---
+//
+// Every write through this module notifies listeners with (key, source).
+// source: "local" — a feature module wrote (cloud sync should push it)
+//         "remote" — the cloud sync engine wrote (React subscriptions
+//                    should refresh, sync must NOT push it back)
+//
+// This is what lets the app stay local-first: feature modules know nothing
+// about the cloud, and the sync engine knows nothing about React.
+
+const listeners = new Set();
+
+export function subscribe(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function notify(key, source) {
+  for (const l of [...listeners]) {
+    try {
+      l(key, source);
+    } catch {
+      // one bad listener must never break a write
+    }
+  }
+}
 
 const DB_NAME = "ascent-db";
 const STORE_NAME = "kv";
@@ -96,7 +124,8 @@ async function idbDel(key) {
 
 // --- public API ---
 
-// Raw string access (notes, theme).
+// Raw string access (notes, theme). Optional `source` tags the write
+// origin for the pub/sub above (default "local").
 export async function getItem(key) {
   const v = await idbGet(key);
   if (typeof v === "string") return v;
@@ -104,12 +133,14 @@ export async function getItem(key) {
   return String(v);
 }
 
-export async function setItem(key, value) {
+export async function setItem(key, value, source = "local") {
   await idbSet(key, String(value));
+  notify(key, source);
 }
 
-export async function removeItem(key) {
+export async function removeItem(key, source = "local") {
   await idbDel(key);
+  notify(key, source);
 }
 
 // JSON object access (progress, plans, rewards, qotd).
@@ -126,6 +157,7 @@ export async function getJSON(key, fallback = null) {
   return v;
 }
 
-export async function setJSON(key, value) {
+export async function setJSON(key, value, source = "local") {
   await idbSet(key, value);
+  notify(key, source);
 }
