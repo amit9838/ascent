@@ -1,24 +1,16 @@
-// Weekly target + monthly topic plans, persisted in localStorage.
+// Weekly target + monthly topic plans, persisted via src/lib/db.js.
 // Shape: { weeklyTarget: number, months: { "YYYY-MM": [topicSlug, ...] } }
 
-const KEY = "dsa-plans-v1";
+import { KEYS, getJSON, setJSON } from "./db.js";
 
 function load() {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY));
-    if (v && typeof v === "object" && !Array.isArray(v)) return v;
-  } catch {
-    // fall through to defaults
-  }
+  const v = getJSON(KEYS.plans, {});
+  if (v && typeof v === "object" && !Array.isArray(v)) return v;
   return {};
 }
 
 function save(v) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(v));
-  } catch {
-    // storage unavailable — plans apply for this session only
-  }
+  setJSON(KEYS.plans, v);
 }
 
 export function getWeeklyTarget() {

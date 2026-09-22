@@ -1,18 +1,13 @@
 import { useState } from "react";
 import { resetRewards } from "./rewards.js";
-
-const KEY = "dsa-progress-v1";
+import { KEYS, getJSON, setJSON } from "./db.js";
 
 export function loadProgress() {
-  try {
-    return JSON.parse(localStorage.getItem(KEY)) ?? {};
-  } catch {
-    return {};
-  }
+  return getJSON(KEYS.progress, {}) ?? {};
 }
 
 export function saveProgress(map) {
-  localStorage.setItem(KEY, JSON.stringify(map));
+  setJSON(KEYS.progress, map);
 }
 
 // done = { [workatProblemUrl]: true }
