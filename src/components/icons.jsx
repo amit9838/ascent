@@ -410,3 +410,22 @@ export function UserIcon({ className }) {
     </Svg>
   );
 }
+
+export function MenuIcon({ className }) {
+  return (
+    <Svg className={className}>
+      <line x1="4" x2="20" y1="6" y2="6" />
+      <line x1="4" x2="20" y1="12" y2="12" />
+      <line x1="4" x2="20" y1="18" y2="18" />
+    </Svg>
+  );
+}
+
+export function XIcon({ className }) {
+  return (
+    <Svg className={className}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Svg>
+  );
+}
