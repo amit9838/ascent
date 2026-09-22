@@ -7,13 +7,20 @@ import TopicsPage from "./pages/TopicsPage.jsx";
 import ProgressPage from "./pages/ProgressPage.jsx";
 import { useProgress } from "./lib/progress.js";
 import { useTheme } from "./lib/theme.js";
-import { ChartIcon, ChevronsUpIcon, GridIcon, NotesIcon, SettingsIcon } from "./components/icons.jsx";
+import { useAuth } from "./lib/auth.js";
+import { useCloudSync } from "./lib/cloud/sync.js";
+import AuthMenu from "./components/AuthMenu.jsx";
+import PublicProfilePage from "./pages/PublicProfilePage.jsx";
+import LeaderboardPage from "./pages/LeaderboardPage.jsx";
+import { ChartIcon, ChevronsUpIcon, GridIcon, NotesIcon, SettingsIcon, TrophyIcon } from "./components/icons.jsx";
 
 // HashRouter is required for gh-pages: static hosting has no URL
 // rewrites, so deep links only work with hash-based routing.
 export default function App() {
   const { done, ready, toggle, reset, replaceAll } = useProgress();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
+  const { status: syncStatus } = useCloudSync(user);
 
   return (
     <HashRouter>
@@ -41,10 +48,15 @@ export default function App() {
                 <ChartIcon className="h-4 w-4" />
                 Progress
               </Link>
+              <Link to="/leaderboard" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+                <TrophyIcon className="h-4 w-4" />
+                Leaderboard
+              </Link>
               <Link to="/settings" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
                 <SettingsIcon className="h-4 w-4" />
                 Settings
               </Link>
+              <AuthMenu user={user} status={syncStatus} />
             </nav>
           </div>
         </header>
@@ -60,10 +72,12 @@ export default function App() {
             <Route path="/notes" element={<NotesPage />} />
             <Route
               path="/settings"
-              element={<SettingsPage done={done} onReplace={replaceAll} onReset={reset} theme={theme} setTheme={setTheme} />}
+              element={<SettingsPage done={done} onReplace={replaceAll} onReset={reset} theme={theme} setTheme={setTheme} user={user} syncStatus={syncStatus} />}
             />
             <Route path="/topics" element={<TopicsPage done={done} />} />
             <Route path="/progress" element={<ProgressPage done={done} />} />
+            <Route path="/leaderboard" element={<LeaderboardPage user={user} />} />
+            <Route path="/u/:uid" element={<PublicProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           )}
