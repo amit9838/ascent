@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// Ascent Firestore rules — deploy by pasting into:
+// Firebase console → Firestore Database → Rules.
+//
+// Model: users/{uid}/state/{doc}      private synced data (owner only)
+//        users/{uid}/following/*      legacy compare-follow list (owner only)
+//        users/{uid}/invites/{from}   invites I received
+//        users/{uid}/sent/{to}        invites I sent (status mirror)
+//        users/{uid}/connections/{p}  my leaderboard connections
+//        profiles/{uid}               public stats (readable only when shared)
+//        emails/{sha256(email)}       email -> uid index for invites
+//
+// Default deny: anything not matched above is inaccessible.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      match /state/{doc} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /following/{targetUid} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Invites I received. Created by the inviter (who must tag the
+      // invite with their own uid and status "pending"); only I can
+      // read, update or delete them after that.
+      match /invites/{fromUid} {
+        allow read: if isOwner(uid);
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.status == "pending";
+        allow update, delete: if isOwner(uid);
+      }
+
+      // Mirror of invites I sent, so I can see pending/accepted/rejected.
+      // The invitee (toUid) may update their own entry (status/name),
+      // never anyone else's.
+      match /sent/{toUid} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          || (request.auth != null && request.auth.uid == toUid
+              && request.resource.data.uid == toUid);
+        allow delete: if isOwner(uid);
+      }
+
+      // My leaderboard connections. Each entry is ABOUT the peer
+      // (data.uid == peerUid). The peer may create/update their own
+      // entry in my list (their name + stats) and delete it (leave).
+      match /connections/{peerUid} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          || (request.auth != null && request.auth.uid == peerUid
+              && request.resource.data.uid == peerUid);
+        allow delete: if isOwner(uid)
+          || (request.auth != null && request.auth.uid == peerUid
+              && resource.data.uid == peerUid);
+      }
+    }
+
+    match /profiles/{uid} {
+      allow read: if isOwner(uid) || resource.data.shareEnabled == true;
+      allow write: if isOwner(uid);
+    }
+
+    // Email -> uid index. Keys are SHA-256 hashes so the index can't be
+    // enumerated. Any signed-in user may resolve one hash (to send an
+    // invite); you may only register your own email.
+    match /emails/{emailHash} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+    }
+  }
+}
