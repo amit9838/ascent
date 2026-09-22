@@ -1,5 +1,6 @@
 // Question of the Day: one deterministic pick per calendar day (local timezone),
-// cached via src/lib/db.js so it survives reloads and only changes the next day.
+// cached via src/lib/db.js (IndexedDB) so it survives reloads and only
+// changes the next day.
 
 import { KEYS, getJSON, setJSON, removeItem } from "./db.js";
 
@@ -37,11 +38,14 @@ export function todayLabel() {
   });
 }
 
-// problems: [{ topic, row }] in stable order; identity = row.Link (workat URL).
+// Deterministic within the day even if storage is unavailable: the cached
+// id only pins the pick across reloads. problems: [{ topic, row }] in
+// stable order; identity = row.Link (workat URL).
 // todayOverride (YYYY-MM-DD) is for testing only.
-export function pickQuestionOfTheDay(problems, todayOverride) {
+export async function pickQuestionOfTheDay(problems, todayOverride) {
+  if (!problems.length) return null;
   const today = todayOverride ?? localDayKey();
-  const cached = getJSON(KEYS.qotd, null);
+  const cached = await getJSON(KEYS.qotd, null);
   if (cached && cached.date === today && cached.id) {
     const found = problems.find((p) => p.row.Link === cached.id);
     if (found)
@@ -50,17 +54,17 @@ export function pickQuestionOfTheDay(problems, todayOverride) {
   const rng = mulberry32(hashStr(`dsa-qotd:${today}`));
   const pick = problems[Math.floor(rng() * problems.length)];
   const id = pick.row.Link;
-  setJSON(KEYS.qotd, { date: today, id });
+  await setJSON(KEYS.qotd, { date: today, id });
   return { ...pick, id, date: today, dateLabel: todayLabel() };
 }
 
-export function loadIgnored() {
-  const v = getJSON(KEYS.qotdIgnored, null);
+export async function loadIgnored() {
+  const v = await getJSON(KEYS.qotdIgnored, null);
   if (v && typeof v.date === "string" && typeof v.id === "string") return v;
   return null;
 }
 
-export function saveIgnored(entry) {
-  if (entry) setJSON(KEYS.qotdIgnored, entry);
-  else removeItem(KEYS.qotdIgnored);
+export async function saveIgnored(entry) {
+  if (entry) await setJSON(KEYS.qotdIgnored, entry);
+  else await removeItem(KEYS.qotdIgnored);
 }

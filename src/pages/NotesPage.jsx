@@ -3,23 +3,34 @@ import { Link } from "react-router-dom";
 import { BackIcon, DownloadIcon, TrashIcon } from "../components/icons.jsx";
 import { KEYS, getItem, setItem } from "../lib/db.js";
 
-function loadNotes() {
-  return getItem(KEYS.notes) ?? "";
-}
-
 export default function NotesPage() {
-  const [text, setText] = useState(loadNotes);
+  const [text, setText] = useState(null); // null = loading from IndexedDB
   const [savedAt, setSavedAt] = useState(null);
 
   useEffect(() => {
-    setItem(KEYS.notes, text);
-    setSavedAt(new Date());
+    let cancelled = false;
+    getItem(KEYS.notes).then((v) => {
+      if (!cancelled) setText(v ?? "");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Debounced write: IndexedDB transactions are cheap but per-keystroke
+  // writes are still wasteful.
+  useEffect(() => {
+    if (text === null) return;
+    const t = setTimeout(() => {
+      setItem(KEYS.notes, text).then(() => setSavedAt(new Date()));
+    }, 500);
+    return () => clearTimeout(t);
   }, [text]);
 
-  const lines = text === "" ? 0 : text.split("\n").length;
+  const lines = !text ? 0 : text.split("\n").length;
 
   const download = () => {
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([text ?? ""], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -31,6 +42,17 @@ export default function NotesPage() {
   const clear = () => {
     if (window.confirm("Delete all notes?")) setText("");
   };
+
+  if (text === null) {
+    return (
+      <div>
+        <Link to="/" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+          <BackIcon className="h-4 w-4" /> All topics
+        </Link>
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Loading notes…</p>
+      </div>
+    );
+  }
 
   return (
     <div>

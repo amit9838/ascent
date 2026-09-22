@@ -125,26 +125,47 @@ export default function HomePage({ done, onToggle }) {
     [done, pointsMap]
   );
 
-  const qotd = useMemo(() => {
-    if (!data) return null;
+  const [qotd, setQotd] = useState(null);
+
+  useEffect(() => {
+    if (!data) return;
+    let cancelled = false;
     const all = TOPICS.flatMap((t) =>
       (data[t.slug] ?? []).map((row) => ({ topic: t, row }))
     );
-    return all.length ? pickQuestionOfTheDay(all) : null;
+    if (!all.length) {
+      setQotd(null);
+      return;
+    }
+    pickQuestionOfTheDay(all).then((q) => {
+      if (!cancelled) setQotd(q);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [data]);
 
-  const [ignored, setIgnored] = useState(loadIgnored);
+  const [ignored, setIgnored] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadIgnored().then((v) => {
+      if (!cancelled) setIgnored(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const isIgnored = Boolean(
     qotd && ignored && ignored.date === qotd.date && ignored.id === qotd.id
   );
-  const ignore = () => {
+  const ignore = async () => {
     if (!qotd) return;
     const entry = { date: qotd.date, id: qotd.id };
-    saveIgnored(entry);
+    await saveIgnored(entry);
     setIgnored(entry);
   };
-  const unignore = () => {
-    saveIgnored(null);
+  const unignore = async () => {
+    await saveIgnored(null);
     setIgnored(null);
   };
 
