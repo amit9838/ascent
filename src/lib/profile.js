@@ -1,28 +1,23 @@
 // Full-profile backup: progress, notes, goals, rewards, theme and
-// question-of-day in one file. Storage keys mirrored from each feature
-// module (kept stable for backward compatibility).
+// question-of-day in one file. Storage keys mirrored from src/lib/db.js
+// (kept stable for backward compatibility).
 
-const KEYS = {
-  progress: "dsa-progress-v1",
-  notes: "dsa-notes-v1",
-  plans: "dsa-plans-v1",
-  rewards: "dsa-rewards-v1",
-  theme: "dsa-theme-v1",
-  qotd: "dsa-qotd-v1",
-};
+import { KEYS, getItem, getJSON, setItem, setJSON } from "./db.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 
 export function exportProfile() {
   const data = {};
   for (const [name, key] of Object.entries(KEYS)) {
-    try {
-      const raw = localStorage.getItem(key);
-      // notes is stored as raw text, everything else as JSON
-      if (raw != null) data[name] = name === "notes" ? raw : JSON.parse(raw);
-    } catch {
-      // skip sections that fail to read/parse
+    if (name === "qotdIgnored") continue; // internal only, not part of backups
+    // notes/theme are stored as raw text, everything else as JSON
+    const raw = name === "notes" || name === "theme" ? getItem(key) : null;
+    if (raw != null) {
+      data[name] = raw;
+      continue;
     }
+    const parsed = getJSON(key, undefined);
+    if (parsed !== undefined) data[name] = parsed;
   }
   return {
     app: "ascent",
@@ -119,17 +114,10 @@ export function parseBackup(json) {
 export function applyBackup(parsed, currentDone) {
   let merged = currentDone;
   if (parsed.progress) merged = { ...currentDone, ...parsed.progress };
-  const put = (key, value, raw) => {
-    try {
-      localStorage.setItem(key, raw ? value : JSON.stringify(value));
-    } catch {
-      // skip sections that fail to write
-    }
-  };
-  if (parsed.notes !== undefined) put(KEYS.notes, parsed.notes, true);
-  if (parsed.plans !== undefined) put(KEYS.plans, parsed.plans);
-  if (parsed.rewards !== undefined) put(KEYS.rewards, parsed.rewards);
-  if (parsed.theme !== undefined) put(KEYS.theme, parsed.theme);
-  if (parsed.qotd !== undefined) put(KEYS.qotd, parsed.qotd);
+  if (parsed.notes !== undefined) setItem(KEYS.notes, parsed.notes);
+  if (parsed.plans !== undefined) setJSON(KEYS.plans, parsed.plans);
+  if (parsed.rewards !== undefined) setJSON(KEYS.rewards, parsed.rewards);
+  if (parsed.theme !== undefined) setItem(KEYS.theme, parsed.theme);
+  if (parsed.qotd !== undefined) setJSON(KEYS.qotd, parsed.qotd);
   return merged;
 }
