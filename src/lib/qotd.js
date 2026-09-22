@@ -1,7 +1,7 @@
 // Question of the Day: one deterministic pick per calendar day (local timezone),
-// cached in localStorage so it survives reloads and only changes the next day.
+// cached via src/lib/db.js so it survives reloads and only changes the next day.
 
-const KEY = "dsa-qotd-v1";
+import { KEYS, getJSON, setJSON, removeItem } from "./db.js";
 
 function localDayKey(d = new Date()) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -41,44 +41,26 @@ export function todayLabel() {
 // todayOverride (YYYY-MM-DD) is for testing only.
 export function pickQuestionOfTheDay(problems, todayOverride) {
   const today = todayOverride ?? localDayKey();
-  try {
-    const cached = JSON.parse(localStorage.getItem(KEY));
-    if (cached && cached.date === today && cached.id) {
-      const found = problems.find((p) => p.row.Link === cached.id);
-      if (found)
-        return { ...found, id: cached.id, date: today, dateLabel: todayLabel() };
-    }
-  } catch {
-    // fall through to a fresh deterministic pick
+  const cached = getJSON(KEYS.qotd, null);
+  if (cached && cached.date === today && cached.id) {
+    const found = problems.find((p) => p.row.Link === cached.id);
+    if (found)
+      return { ...found, id: cached.id, date: today, dateLabel: todayLabel() };
   }
   const rng = mulberry32(hashStr(`dsa-qotd:${today}`));
   const pick = problems[Math.floor(rng() * problems.length)];
   const id = pick.row.Link;
-  try {
-    localStorage.setItem(KEY, JSON.stringify({ date: today, id }));
-  } catch {
-    // storage unavailable — the deterministic pick is still stable within the day
-  }
+  setJSON(KEYS.qotd, { date: today, id });
   return { ...pick, id, date: today, dateLabel: todayLabel() };
 }
 
-const IGNORED_KEY = "dsa-qotd-ignored-v1";
-
 export function loadIgnored() {
-  try {
-    const v = JSON.parse(localStorage.getItem(IGNORED_KEY));
-    if (v && typeof v.date === "string" && typeof v.id === "string") return v;
-  } catch {
-    // fall through to null
-  }
+  const v = getJSON(KEYS.qotdIgnored, null);
+  if (v && typeof v.date === "string" && typeof v.id === "string") return v;
   return null;
 }
 
 export function saveIgnored(entry) {
-  try {
-    if (entry) localStorage.setItem(IGNORED_KEY, JSON.stringify(entry));
-    else localStorage.removeItem(IGNORED_KEY);
-  } catch {
-    // storage unavailable — ignore applies for this session only
-  }
+  if (entry) setJSON(KEYS.qotdIgnored, entry);
+  else removeItem(KEYS.qotdIgnored);
 }

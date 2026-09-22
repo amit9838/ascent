@@ -4,36 +4,27 @@
 // weekly: { "<monday YYYY-MM-DD>": "earned" | "collected" } }
 
 import { dayKey, dayPoints, weekStart } from "./activity.js";
-
-const KEY = "dsa-rewards-v1";
+import { KEYS, getJSON, setJSON, removeItem } from "./db.js";
 
 function loadState() {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY));
-    if (v && typeof v === "object") {
-      return {
-        daily:
-          v.daily && typeof v.daily === "object" && !Array.isArray(v.daily)
-            ? v.daily
-            : {},
-        weekly:
-          v.weekly && typeof v.weekly === "object" && !Array.isArray(v.weekly)
-            ? v.weekly
-            : {},
-      };
-    }
-  } catch {
-    // fall through to empty state
+  const v = getJSON(KEYS.rewards, null);
+  if (v && typeof v === "object") {
+    return {
+      daily:
+        v.daily && typeof v.daily === "object" && !Array.isArray(v.daily)
+          ? v.daily
+          : {},
+      weekly:
+        v.weekly && typeof v.weekly === "object" && !Array.isArray(v.weekly)
+          ? v.weekly
+          : {},
+    };
   }
   return { daily: {}, weekly: {} };
 }
 
 function saveState(s) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(s));
-  } catch {
-    // storage unavailable — rewards apply for this session only
-  }
+  setJSON(KEYS.rewards, s);
 }
 
 function parseDay(key /* YYYY-MM-DD, noon local to avoid TZ shifts */) {
@@ -105,11 +96,7 @@ export function collectWeekly(weekKey) {
 }
 
 export function resetRewards() {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    // nothing to clear
-  }
+  removeItem(KEYS.rewards);
 }
 
 
