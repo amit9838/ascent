@@ -1,15 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BackIcon, DownloadIcon, TrashIcon } from "../components/icons.jsx";
-
-const KEY = "dsa-notes-v1";
+import { KEYS, getItem, setItem } from "../lib/db.js";
 
 function loadNotes() {
-  try {
-    return localStorage.getItem(KEY) ?? "";
-  } catch {
-    return "";
-  }
+  return getItem(KEYS.notes) ?? "";
 }
 
 export default function NotesPage() {
@@ -17,12 +12,8 @@ export default function NotesPage() {
   const [savedAt, setSavedAt] = useState(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(KEY, text);
-      setSavedAt(new Date());
-    } catch {
-      // storage unavailable — notes stay in memory only
-    }
+    setItem(KEYS.notes, text);
+    setSavedAt(new Date());
   }, [text]);
 
   const lines = text === "" ? 0 : text.split("\n").length;

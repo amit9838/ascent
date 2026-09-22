@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-
-const KEY = "dsa-theme-v1";
+import { KEYS, getItem, setItem } from "./db.js";
 
 function initialTheme() {
-  try {
-    const saved = localStorage.getItem(KEY);
-    if (saved === "light" || saved === "dark") return saved;
-  } catch {
-    // fall through to OS preference
-  }
+  const saved = getItem(KEYS.theme);
+  if (saved === "light" || saved === "dark") return saved;
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
@@ -19,11 +14,7 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    try {
-      localStorage.setItem(KEY, theme);
-    } catch {
-      // storage unavailable — theme applies for this session only
-    }
+    setItem(KEYS.theme, theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
