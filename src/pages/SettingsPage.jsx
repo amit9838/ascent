@@ -8,8 +8,8 @@ export default function SettingsPage({ done, onReplace, onReset, theme, setTheme
   const [message, setMessage] = useState(null); // { ok, text }
   const solved = Object.keys(done).length;
 
-  const exportFile = () => {
-    const payload = exportProfile();
+  const exportFile = async () => {
+    const payload = await exportProfile();
     const day = new Date().toISOString().slice(0, 10);
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
@@ -24,7 +24,7 @@ export default function SettingsPage({ done, onReplace, onReset, theme, setTheme
 
   const importFile = (file) => {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       let parsed;
       try {
         parsed = parseBackup(JSON.parse(reader.result));
@@ -41,7 +41,8 @@ export default function SettingsPage({ done, onReplace, onReset, theme, setTheme
         )
       )
         return;
-      onReplace(applyBackup(parsed, done));
+      const merged = await applyBackup(parsed, done);
+      await onReplace(merged);
       window.location.reload();
     };
     reader.onerror = () =>
@@ -56,7 +57,7 @@ export default function SettingsPage({ done, onReplace, onReset, theme, setTheme
       </Link>
       <h1 className="mt-2 text-2xl font-bold tracking-tight">Settings</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Your progress is stored only in this browser (localStorage).
+        Your progress is stored only in this browser (IndexedDB).
       </p>
 
       <section className="mt-6 max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
@@ -135,9 +136,9 @@ export default function SettingsPage({ done, onReplace, onReset, theme, setTheme
           Clears all solved marks. Export a backup first if you want to keep them.
         </p>
         <button
-          onClick={() => {
+          onClick={async () => {
             if (window.confirm("Reset all solved progress?")) {
-              onReset();
+              await onReset();
               setMessage({ ok: true, text: "Progress reset." });
             }
           }}

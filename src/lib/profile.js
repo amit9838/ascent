@@ -6,17 +6,17 @@ import { KEYS, getItem, getJSON, setItem, setJSON } from "./db.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 
-export function exportProfile() {
+export async function exportProfile() {
   const data = {};
   for (const [name, key] of Object.entries(KEYS)) {
     if (name === "qotdIgnored") continue; // internal only, not part of backups
     // notes/theme are stored as raw text, everything else as JSON
-    const raw = name === "notes" || name === "theme" ? getItem(key) : null;
-    if (raw != null) {
-      data[name] = raw;
+    if (name === "notes" || name === "theme") {
+      const raw = await getItem(key);
+      if (raw != null) data[name] = raw;
       continue;
     }
-    const parsed = getJSON(key, undefined);
+    const parsed = await getJSON(key, undefined);
     if (parsed !== undefined) data[name] = parsed;
   }
   return {
@@ -111,13 +111,13 @@ export function parseBackup(json) {
 
 // Progress merges into the current map; singleton sections replace.
 // Returns the merged done map (caller persists it via onReplace).
-export function applyBackup(parsed, currentDone) {
+export async function applyBackup(parsed, currentDone) {
   let merged = currentDone;
   if (parsed.progress) merged = { ...currentDone, ...parsed.progress };
-  if (parsed.notes !== undefined) setItem(KEYS.notes, parsed.notes);
-  if (parsed.plans !== undefined) setJSON(KEYS.plans, parsed.plans);
-  if (parsed.rewards !== undefined) setJSON(KEYS.rewards, parsed.rewards);
-  if (parsed.theme !== undefined) setItem(KEYS.theme, parsed.theme);
-  if (parsed.qotd !== undefined) setJSON(KEYS.qotd, parsed.qotd);
+  if (parsed.notes !== undefined) await setItem(KEYS.notes, parsed.notes);
+  if (parsed.plans !== undefined) await setJSON(KEYS.plans, parsed.plans);
+  if (parsed.rewards !== undefined) await setJSON(KEYS.rewards, parsed.rewards);
+  if (parsed.theme !== undefined) await setItem(KEYS.theme, parsed.theme);
+  if (parsed.qotd !== undefined) await setJSON(KEYS.qotd, parsed.qotd);
   return merged;
 }
