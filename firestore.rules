@@ -8,6 +8,10 @@ rules_version = '2';
 //        users/{uid}/invites/{from}   invites I received
 //        users/{uid}/sent/{to}        invites I sent (status mirror)
 //        users/{uid}/connections/{p}  my leaderboard connections
+//        users/{uid}/sharedWithMe/{n} notes shared with me (discovery inbox)
+//        sharedNotes/{noteId}         collaborative notes: owner + members
+//                                     may read; owner manages members;
+//                                     members may edit title/body only
 //        profiles/{uid}               public stats (readable only when shared)
 //        emails/{sha256(email)}       email -> uid index for invites
 //
@@ -65,6 +69,53 @@ service cloud.firestore {
           || (request.auth != null && request.auth.uid == peerUid
               && resource.data.uid == peerUid);
       }
+
+      // Notes shared with me. The owner (note creator) writes my inbox
+      // entry when sharing; I read it to discover the note and delete it
+      // to leave. The owner may refresh my entry's title after edits.
+      match /sharedWithMe/{noteId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if request.auth != null
+          && request.resource.data.ownerUid == request.auth.uid;
+        allow update: if isOwner(uid)
+          || (request.auth != null && request.auth.uid == resource.data.ownerUid);
+      }
+    }
+
+    // Collaborative notes. Ownership stays with the creator (ownerUid);
+    // members can see and edit title/body, but only the owner manages
+    // the member list or deletes the note. Sync is save-based, not
+    // realtime: writers push on save, readers pull on open.
+    match /sharedNotes/{noteId} {
+      function isNoteOwner() {
+        return request.auth != null && resource.data.ownerUid == request.auth.uid;
+      }
+      function isNoteMember() {
+        return request.auth != null && request.auth.uid in resource.data.members;
+      }
+      // Leaving: a member removes only themselves from the member list
+      // (content untouched) so owners never see ghost collaborators.
+      function isSelfRemoval() {
+        return request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.title == resource.data.title
+          && request.resource.data.body == resource.data.body
+          && request.auth.uid in resource.data.members
+          && !(request.auth.uid in request.resource.data.members)
+          && resource.data.members.hasAll(request.resource.data.members)
+          && request.resource.data.members.size() + 1 == resource.data.members.size();
+      }
+      allow read: if isNoteOwner() || isNoteMember();
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.auth.uid in request.resource.data.members;
+      allow update: if isNoteOwner()
+        || (isNoteMember()
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.members == resource.data.members
+          && request.resource.data.createdAt == resource.data.createdAt)
+        || (isNoteMember() && isSelfRemoval());
+      allow delete: if isNoteOwner();
     }
 
     match /profiles/{uid} {

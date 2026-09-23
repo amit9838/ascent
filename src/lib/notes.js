@@ -40,11 +40,25 @@ function sanitizeNote(n) {
     body: String(n?.body ?? "").slice(0, BODY_LIMIT),
     createdAt: typeof n?.createdAt === "string" ? n.createdAt : now,
     updatedAt: typeof n?.updatedAt === "string" ? n.updatedAt : now,
+    // Collaboration markers (absent on private notes). `sharedId` is the
+    // cloud doc id (owner's note id); ownership stays with `ownerUid`.
+    shared: n?.shared === true,
+    ownerUid: typeof n?.ownerUid === "string" ? n.ownerUid : "",
+    ownerName: typeof n?.ownerName === "string" ? n.ownerName.slice(0, 120) : "",
+    sharedId: typeof n?.sharedId === "string" ? n.sharedId : "",
   };
 }
 
 function toMeta(n) {
-  return { id: n.id, title: n.title, createdAt: n.createdAt, updatedAt: n.updatedAt };
+  return {
+    id: n.id,
+    title: n.title,
+    createdAt: n.createdAt,
+    updatedAt: n.updatedAt,
+    shared: n.shared === true,
+    ownerUid: typeof n.ownerUid === "string" ? n.ownerUid : "",
+    ownerName: typeof n.ownerName === "string" ? n.ownerName : "",
+  };
 }
 
 const byNewest = (a, b) =>
@@ -90,25 +104,34 @@ function parseBlob(raw) {
   return [makeNote({ title: "Notes", body: String(raw) })];
 }
 
-// Replace every record + the index from a full array, then drop the
-// legacy aggregate key. Caps at MAX_NOTES (newest kept).
+// Replace every OWNED record + the index from a full array, then drop the
+// legacy aggregate key. Caps owned notes at MAX_NOTES (newest kept).
+// Shared notes (collaborations owned by someone else) are preserved as-is
+// and never count toward the cap — they live in the cloud shared doc.
 async function writeAll(notes, source) {
   const capped = notes
     .map(sanitizeNote)
-    .filter((n) => n.id)
+    .filter((n) => n.id && !n.shared)
     .sort(byNewest)
     .slice(0, MAX_NOTES);
   const oldIndex = (await getJSON(INDEX_KEY, [])) ?? [];
   const keep = new Set(capped.map((n) => n.id));
   for (const e of oldIndex) {
-    if (e && typeof e.id === "string" && !keep.has(e.id)) {
+    if (e && typeof e.id === "string" && !keep.has(e.id) && !e.shared) {
       await removeItem(noteKey(e.id), source);
+    }
+  }
+  const keptShared = [];
+  for (const e of oldIndex) {
+    if (e?.shared && typeof e.id === "string" && e.id) {
+      const rec = await getJSON(noteKey(e.id), null);
+      if (rec && typeof rec === "object" && rec.id) keptShared.push(sanitizeNote(rec));
     }
   }
   for (const n of capped) await setJSON(noteKey(n.id), n, source);
   await setJSON(
     INDEX_KEY,
-    capped.map(toMeta),
+    [...capped, ...keptShared].map(toMeta),
     source
   );
   const legacy = await getItem(KEYS.notes);
@@ -144,6 +167,9 @@ export async function listNoteMeta() {
       title: typeof e.title === "string" ? e.title.slice(0, TITLE_LIMIT) : "",
       createdAt: typeof e.createdAt === "string" ? e.createdAt : isoNow(),
       updatedAt: typeof e.updatedAt === "string" ? e.updatedAt : isoNow(),
+      shared: e.shared === true,
+      ownerUid: typeof e.ownerUid === "string" ? e.ownerUid : "",
+      ownerName: typeof e.ownerName === "string" ? e.ownerName : "",
     }))
     .sort(byNewest);
 }
@@ -183,10 +209,22 @@ export async function deleteNote(id, source = "local") {
 
 export async function clearAllNotes(source = "local") {
   const index = (await getJSON(INDEX_KEY, [])) ?? [];
+  const keptShared = [];
   for (const e of index) {
-    if (e && typeof e.id === "string") await removeItem(noteKey(e.id), source);
+    if (e && typeof e.id === "string") {
+      if (e.shared) {
+        const rec = await getJSON(noteKey(e.id), null);
+        if (rec && typeof rec === "object" && rec.id) keptShared.push(sanitizeNote(rec));
+      } else {
+        await removeItem(noteKey(e.id), source);
+      }
+    }
   }
-  await removeItem(INDEX_KEY, source);
+  await setJSON(
+    INDEX_KEY,
+    keptShared.map(toMeta),
+    source
+  );
   const legacy = await getItem(KEYS.notes);
   if (legacy != null) await removeItem(KEYS.notes, source);
   notify(KEYS.notes, source);
@@ -199,8 +237,10 @@ export async function readNotesBlob() {
   const index = (await getJSON(INDEX_KEY, [])) ?? [];
   if (!index.length) return null;
   const notes = await Promise.all(
-    index.map((e) => (e?.id ? readNote(e.id) : null))
+    index.map((e) => (e?.id && !e.shared ? readNote(e.id) : null))
   );
+  // Shared notes are excluded: they sync through their shared cloud doc,
+  // never through the owner's personal aggregate.
   const list = notes.filter(Boolean);
   return list.length ? JSON.stringify(list) : null;
 }
