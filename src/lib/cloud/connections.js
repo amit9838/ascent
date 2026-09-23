@@ -181,6 +181,44 @@ export async function listSentInvites(uid) {
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() })).sort(byNewest);
 }
 
+// Sender withdraws a pending invite: drop the recipient's inbox copy
+// (rules allow the inviter to delete their own invite) plus my status
+// mirror. The recipient's live listener updates their UI automatically.
+export async function withdrawInvite(myUid, peerUid) {
+  const { db, m } = await fs();
+  await step(
+    "withdrawing the invite",
+    () =>
+      // not-found: they accepted/rejected between render and click —
+      // their inbox copy is already gone, keep going.
+      m
+        .deleteDoc(m.doc(db, "users", peerUid, "invites", myUid))
+        .catch((err) => {
+          if (err?.code !== "not-found") throw err;
+        })
+  );
+  await step(
+    "clearing your sent record",
+    () => m.deleteDoc(m.doc(db, "users", myUid, "sent", peerUid))
+  );
+  invalidateRel(myUid, peerUid);
+}
+
+// Deletes sent-invite records in terminal states (accepted/rejected).
+// Pending rows are kept so the sender can still track or withdraw them.
+// Connections are untouched — only invitation history is removed.
+export async function clearFinishedSentInvites(uid) {
+  const { db, m } = await fs();
+  const snap = await step("loading invite history", () =>
+    m.getDocs(m.collection(db, "users", uid, "sent"))
+  );
+  const terminal = snap.docs.filter((d) =>
+    ["accepted", "rejected"].includes(d.data()?.status)
+  );
+  await Promise.all(terminal.map((d) => m.deleteDoc(d.ref).catch(() => {})));
+  return terminal.length;
+}
+
 export async function acceptInvite(myUid, invite) {
   const from = invite.uid;
   const [info, summary, inviterProfile] = await Promise.all([

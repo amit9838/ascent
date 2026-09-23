@@ -29,13 +29,17 @@ service cloud.firestore {
 
       // Invites I received. Created by the inviter (who must tag the
       // invite with their own uid and status "pending"); only I can
-      // read, update or delete them after that.
+      // read or update them after that. The inviter may delete their
+      // own invite (withdraw) — but only while it still exists in my
+      // inbox, i.e. they can't touch it after I accept/reject.
       match /invites/{fromUid} {
         allow read: if isOwner(uid);
         allow create: if request.auth != null
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.status == "pending";
-        allow update, delete: if isOwner(uid);
+        allow update: if isOwner(uid);
+        allow delete: if isOwner(uid)
+          || (request.auth != null && request.auth.uid == fromUid);
       }
 
       // Mirror of invites I sent, so I can see pending/accepted/rejected.
