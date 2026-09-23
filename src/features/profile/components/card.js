@@ -1,3 +1,3 @@
-// Shared card surface used by public-profile sections.
-export const CARD =
-  "rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900";
+// Shared card surface used by public-profile sections — re-exported
+// from the Card primitive so all cards share one definition.
+export { CARD_CLASS as CARD } from "../../../components/primitives/index.js";
