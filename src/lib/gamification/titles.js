@@ -49,6 +49,15 @@ export function currentRank(solved, total) {
   return { current, next };
 }
 
+const RANK_ORDER = [...RANKS.map(([, name]) => name), "Crown Jewel"];
+
+// Numeric tier for a rank title so titles can be compared/sorted.
+// "Unranked" (or anything unknown) sorts lowest.
+export function rankTier(name) {
+  const i = RANK_ORDER.indexOf(name);
+  return i === -1 ? -1 : i;
+}
+
 // Longest consecutive-day run ever (not just the live streak).
 export function maxStreak(done, now = new Date()) {
   const counts = dayCounts(done);
