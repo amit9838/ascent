@@ -34,8 +34,15 @@ function ensure() {
     const app = getApps()[0] ?? initializeApp(config);
 
     const fsMod = await import("firebase/firestore");
+    // Persistent local cache: snapshots and getDoc serve from disk on
+    // warm starts / offline, cutting repeat network reads. Multi-tab
+    // manager keeps two open tabs from clobbering each other's cache;
+    // if IndexedDB is unavailable the SDK falls back to memory.
     const db = fsMod.initializeFirestore(app, {
       ignoreUndefinedProperties: true,
+      localCache: fsMod.persistentLocalCache({
+        tabManager: fsMod.persistentMultipleTabManager(),
+      }),
     });
 
     const authMod = await import("firebase/auth");

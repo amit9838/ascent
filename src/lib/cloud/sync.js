@@ -25,6 +25,7 @@ import {
 import { loadFirestore } from "./firebase.js";
 import { mergeProgress, mergeRewards, lwwNewer } from "./merge.js";
 import { computeSummary } from "./profileSummary.js";
+import { invalidateProfile } from "./follow.js";
 import {
   pushSummaryToConnections,
   registerEmailIndex,
@@ -198,17 +199,19 @@ export function useCloudSync(user) {
           }
         }
 
-        // Initial pull.
-        for (const key of SYNCED_KEYS) {
-          const ref = await stateRef(user.uid, key);
-          const { m } = await fs();
-          const snap = await m.getDoc(ref).catch(() => null);
-          if (!snap || !snap.exists()) {
-            st.dirty.add(key); // nothing in the cloud yet — push local
-            continue;
-          }
-          await applyRemote(key, snap.data(), st);
-        }
+        // Initial pull — all four state docs in parallel.
+        await Promise.all(
+          SYNCED_KEYS.map(async (key) => {
+            const ref = await stateRef(user.uid, key);
+            const { m } = await fs();
+            const snap = await m.getDoc(ref).catch(() => null);
+            if (!snap || !snap.exists()) {
+              st.dirty.add(key); // nothing in the cloud yet — push local
+              return;
+            }
+            await applyRemote(key, snap.data(), st);
+          })
+        );
         await setJSON(
           KEYS.cloudMeta,
           { ...meta, lastSyncedUid: user.uid },
@@ -232,6 +235,7 @@ export function useCloudSync(user) {
         }
         if (Object.keys(patch).length) {
           await m.setDoc(pRef, patch, { merge: true }).catch(() => {});
+          invalidateProfile(user.uid);
         }
 
         // Register my email in the invite index (hashed) so others can

@@ -8,27 +8,32 @@ import { loadTopicCsv } from "../csv.js";
 import { buildPointsMap, pointsOf } from "../gamification/points.js";
 import { currentStreak } from "../gamification/activity.js";
 import { currentRank } from "../gamification/titles.js";
-import { KEYS, getJSON } from "../db.js";
+import { KEYS, getJSON, subscribe } from "../db.js";
+import { cached, forget } from "../cache.js";
 
 let topicDataPromise = null;
+let pointsMap = null; // derived once from the static CSVs
 
 function loadTopicData() {
   if (!topicDataPromise) {
     topicDataPromise = Promise.all(
       TOPICS.map((t) => loadTopicCsv(t.csv).then((rows) => [t.slug, rows]))
-    ).then(Object.fromEntries);
+    ).then((entries) => {
+      const data = Object.fromEntries(entries);
+      pointsMap = buildPointsMap(data);
+      return data;
+    });
   }
   return topicDataPromise;
 }
 
-export async function computeSummary() {
+async function computeSummaryImpl() {
   const [done, rewards, data] = await Promise.all([
     getJSON(KEYS.progress, {}),
     getJSON(KEYS.rewards, {}),
     loadTopicData(),
   ]);
   const doneMap = done ?? {};
-  const pointsMap = buildPointsMap(data);
   const total = Object.values(data).reduce((a, rows) => a + rows.length, 0);
   const solved = Object.keys(doneMap).length;
   const points = Object.entries(doneMap).reduce(
@@ -51,4 +56,15 @@ export async function computeSummary() {
     crowns,
     updatedAt: new Date().toISOString(),
   };
+}
+
+// The summary only changes when progress or rewards are written — every
+// write flows through db.js pub/sub, so invalidate exactly then (no TTL
+// staleness window). Concurrent callers share one computation.
+subscribe((key) => {
+  if (key === KEYS.progress || key === KEYS.rewards) forget("summary");
+});
+
+export function computeSummary() {
+  return cached("summary", computeSummaryImpl, { ttl: Infinity });
 }
