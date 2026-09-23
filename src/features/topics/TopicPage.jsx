@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getTopic, workatTopicUrl } from "../data/topics.js";
-import { loadTopicCsv, F } from "../lib/csv.js";
-import { DifficultyBadge, ExternalLink, ProgressBar } from "../components/ui.jsx";
-import { BackIcon, ExternalIcon, SearchIcon } from "../components/icons.jsx";
+import { getTopic, workatTopicUrl } from "../../data/topics.js";
+import { loadTopicCsv, F } from "../../lib/csv.js";
+import { DifficultyBadge, ExternalLink, ProgressBar } from "../../components/ui.jsx";
+import { BackIcon, ExternalIcon, SearchIcon } from "../../components/icons.jsx";
 
 export default function TopicPage({ done, onToggle }) {
   const { slug } = useParams();

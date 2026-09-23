@@ -1,25 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { TOPICS } from "../data/topics.js";
-import { loadTopicCsv, F } from "../lib/csv.js";
-import { buildPointsMap } from "../lib/points.js";
-import { useWeeklyTarget } from "../lib/plans.js";
+import { TOPICS } from "../../data/topics.js";
+import { loadTopicCsv, F } from "../../lib/csv.js";
+import { buildPointsMap } from "../../lib/gamification/points.js";
+import { useWeeklyTarget } from "../../lib/gamification/plans.js";
 import {
   collectDaily,
   collectWeekly,
   dailyTarget,
   refreshRewards,
-} from "../lib/rewards.js";
+} from "../../lib/gamification/rewards.js";
 import {
   CONSISTENCY_TITLES,
   STREAK_TITLES,
   currentRank,
   maxStreak,
   rankLadder,
-} from "../lib/titles.js";
-import { CheckIcon, FlameIcon, StarIcon, TrophyIcon } from "../components/icons.jsx";
-import { ProgressBar } from "../components/ui.jsx";
-import { CoinStack } from "../components/CoinStack.jsx";
-import { GoldCoin, SapphireCoin } from "../components/coins.jsx";
+} from "../../lib/gamification/titles.js";
+import { CheckIcon, FlameIcon, StarIcon, TrophyIcon } from "../../components/icons.jsx";
+import { ProgressBar } from "../../components/ui.jsx";
+import { CoinStack } from "../../components/CoinStack.jsx";
+import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
 
 function fmtFull(key /* YYYY-MM-DD, parsed without timezone shift */) {
   const [y, m, d] = key.split("-").map(Number);

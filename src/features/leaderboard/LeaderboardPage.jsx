@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { cloudEnabled } from "../lib/firebase.js";
-import { computeSummary } from "../lib/cloud/profileSummary.js";
+import { cloudEnabled } from "../../lib/cloud/firebase.js";
+import { computeSummary } from "../../lib/cloud/profileSummary.js";
 import {
   acceptInvite,
   rejectInvite,
@@ -10,8 +10,8 @@ import {
   subscribeConnections,
   subscribeInvites,
   subscribeSent,
-} from "../lib/cloud/connections.js";
-import { CheckIcon, FlameIcon, HashIcon, TrophyIcon, UserIcon, ZapIcon } from "../components/icons.jsx";
+} from "../../lib/cloud/connections.js";
+import { CheckIcon, FlameIcon, HashIcon, TrophyIcon, UserIcon, ZapIcon } from "../../components/icons.jsx";
 
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-700 dark:bg-slate-900";

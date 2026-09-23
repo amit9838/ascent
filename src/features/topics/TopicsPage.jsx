@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { TOPICS, workatTopicUrl } from "../data/topics.js";
-import { loadTopicCsv, F } from "../lib/csv.js";
-import { ProgressBar } from "../components/ui.jsx";
-import { ArrowRightIcon, ExternalIcon } from "../components/icons.jsx";
+import { TOPICS, workatTopicUrl } from "../../data/topics.js";
+import { loadTopicCsv, F } from "../../lib/csv.js";
+import { ProgressBar } from "../../components/ui.jsx";
+import { ArrowRightIcon, ExternalIcon } from "../../components/icons.jsx";
 
 export default function TopicsPage({ done }) {
   const [data, setData] = useState(null); // { slug: rows[] }

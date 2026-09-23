@@ -6,10 +6,10 @@ import {
   heatmapWeeks,
   solvedThisWeek,
   weekRangeLabel,
-} from "../lib/activity.js";
-import { useWeeklyTarget } from "../lib/plans.js";
-import { dailyTarget } from "../lib/rewards.js";
-import { pointsOf } from "../lib/points.js";
+} from "../../lib/gamification/activity.js";
+import { useWeeklyTarget } from "../../lib/gamification/plans.js";
+import { dailyTarget } from "../../lib/gamification/rewards.js";
+import { pointsOf } from "../../lib/gamification/points.js";
 import {
   CalendarIcon,
   CheckIcon,
@@ -17,9 +17,9 @@ import {
   StarIcon,
   TargetIcon,
   ZapIcon,
-} from "./icons.jsx";
+} from "../../components/icons.jsx";
 import { Link } from "react-router-dom";
-import { ProgressBar } from "./ui.jsx";
+import { ProgressBar } from "../../components/ui.jsx";
 
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900";

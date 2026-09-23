@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { BackIcon, DownloadIcon, TrashIcon } from "../components/icons.jsx";
-import { KEYS, getItem, setItem, subscribe } from "../lib/db.js";
+import { BackIcon, DownloadIcon, TrashIcon } from "../../components/icons.jsx";
+import { KEYS, getItem, setItem, subscribe } from "../../lib/db.js";
 
 export default function NotesPage() {
   const [text, setText] = useState(null); // null = loading from IndexedDB

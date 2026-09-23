@@ -9,18 +9,18 @@ import {
   TrashIcon,
   UploadIcon,
   UserIcon,
-} from "../components/icons.jsx";
-import { applyBackup, exportProfile, parseBackup } from "../lib/profile.js";
-import { AuthModal } from "../components/AuthMenu.jsx";
+} from "../../components/icons.jsx";
+import { applyBackup, exportProfile, parseBackup } from "./backup.js";
+import { AuthModal } from "../../components/AuthMenu.jsx";
 import {
   deleteAccountAndCloudData,
   setDisplayName,
   signOutUser,
-} from "../lib/auth.js";
-import { cloudEnabled } from "../lib/firebase.js";
-import { getProfile, updateProfileDoc } from "../lib/cloud/follow.js";
-import { refreshProfileSummary, syncErrorHint } from "../lib/cloud/sync.js";
-import { refreshConnectionSummaries } from "../lib/cloud/connections.js";
+} from "../../lib/auth.js";
+import { cloudEnabled } from "../../lib/cloud/firebase.js";
+import { getProfile, updateProfileDoc } from "../../lib/cloud/follow.js";
+import { refreshProfileSummary, syncErrorHint } from "../../lib/cloud/sync.js";
+import { refreshConnectionSummaries } from "../../lib/cloud/connections.js";
 
 // Priority order: Account (identity/sync) → Data (safety) → Appearance
 // (preference) → Danger zone (destructive, always last, isolated).

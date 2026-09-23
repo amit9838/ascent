@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { TOPICS } from "../data/topics.js";
-import { loadTopicCsv, F } from "../lib/csv.js";
-import { buildPointsMap, pointsOf } from "../lib/points.js";
-import { loadIgnored, pickQuestionOfTheDay, saveIgnored } from "../lib/qotd.js";
-import { DifficultyBadge, ExternalLink } from "../components/ui.jsx";
+import { TOPICS } from "../../data/topics.js";
+import { loadTopicCsv, F } from "../../lib/csv.js";
+import { buildPointsMap, pointsOf } from "../../lib/gamification/points.js";
+import { loadIgnored, pickQuestionOfTheDay, saveIgnored } from "./qotd.js";
+import { DifficultyBadge, ExternalLink } from "../../components/ui.jsx";
 import {
   ActivityHeatmap,
   OverviewRow,
   WeeklyGoalCard,
-} from "../components/dashboard.jsx";
-import { RewardsCard } from "../components/rewards.jsx";
-import { ArrowRightIcon, CheckIcon, ZapIcon } from "../components/icons.jsx";
+} from "./dashboard.jsx";
+import { RewardsCard } from "./rewards.jsx";
+import { ArrowRightIcon, CheckIcon, ZapIcon } from "../../components/icons.jsx";
 
 const primaryBtn =
   "rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700";

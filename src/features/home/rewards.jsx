@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { dayKey, dayPoints, weekStart } from "../lib/activity.js";
+import { dayKey, dayPoints, weekStart } from "../../lib/gamification/activity.js";
 import {
   collectDaily,
   collectWeekly,
   dailyTarget,
   refreshRewards,
-} from "../lib/rewards.js";
-import { useWeeklyTarget } from "../lib/plans.js";
-import { CheckIcon, GiftIcon , ArrowRightIcon} from "./icons.jsx";
-import { GoldCoin, SapphireCoin } from "./coins.jsx";
+} from "../../lib/gamification/rewards.js";
+import { useWeeklyTarget } from "../../lib/gamification/plans.js";
+import { CheckIcon, GiftIcon , ArrowRightIcon} from "../../components/icons.jsx";
+import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
 
 
 const primaryBtn =

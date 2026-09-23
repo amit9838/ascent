@@ -2,7 +2,7 @@
 // question-of-day in one file. Storage keys mirrored from src/lib/db.js
 // (kept stable for backward compatibility).
 
-import { KEYS, getItem, getJSON, setItem, setJSON } from "./db.js";
+import { KEYS, getItem, getJSON, setItem, setJSON } from "../../lib/db.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 

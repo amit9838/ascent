@@ -2,7 +2,7 @@
 // cached via src/lib/db.js (IndexedDB) so it survives reloads and only
 // changes the next day.
 
-import { KEYS, getJSON, setJSON, removeItem } from "./db.js";
+import { KEYS, getJSON, setJSON, removeItem } from "../../lib/db.js";
 
 function localDayKey(d = new Date()) {
   const m = String(d.getMonth() + 1).padStart(2, "0");

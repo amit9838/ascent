@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { cloudEnabled } from "../lib/firebase.js";
-import { getProfile } from "../lib/cloud/follow.js";
+import { cloudEnabled } from "../../lib/cloud/firebase.js";
+import { getProfile } from "../../lib/cloud/follow.js";
 import {
   getSentStatus,
   isConnected,
   sendInviteToUid,
-} from "../lib/cloud/connections.js";
-import { useAuth } from "../lib/auth.js";
-import { AuthModal } from "../components/AuthMenu.jsx";
+} from "../../lib/cloud/connections.js";
+import { useAuth } from "../../lib/auth.js";
+import { AuthModal } from "../../components/AuthMenu.jsx";
 import {
   CARD,
   CoinCard,
@@ -16,9 +16,9 @@ import {
   ProfileHero,
   RankPath,
   SectionHead,
-} from "../components/profile.jsx";
-import { GoldCoin, SapphireCoin } from "../components/coins.jsx";
-import { BackIcon, CheckIcon, UserIcon } from "../components/icons.jsx";
+} from "./components/index.js";
+import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
+import { BackIcon, CheckIcon, UserIcon } from "../../components/icons.jsx";
 
 export default function PublicProfilePage() {
   const { uid } = useParams();
@@ -160,7 +160,7 @@ export default function PublicProfilePage() {
       ) : relation === "signedout" ? (
         <button
           onClick={() => setModal(true)}
-          className="flex items-center justify-center gap-2 rounded-xl border border-white/25 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+          className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/25 dark:text-white dark:hover:bg-white/10"
         >
           <UserIcon className="h-4 w-4" /> Sign in to invite
         </button>
@@ -168,14 +168,14 @@ export default function PublicProfilePage() {
         <button
           onClick={invite}
           disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:opacity-50"
+          className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
         >
           <UserIcon className="h-4 w-4" />
           {busy ? "Sending…" : "Invite to leaderboard"}
         </button>
       )}
       {inviteMsg && (
-        <p className="max-w-48 text-xs text-rose-400">{inviteMsg}</p>
+        <p className="max-w-48 text-xs text-rose-600 dark:text-rose-400">{inviteMsg}</p>
       )}
     </>
   );
