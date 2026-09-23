@@ -11,7 +11,8 @@ import {
   subscribeInvites,
   subscribeSent,
 } from "../../lib/cloud/connections.js";
-import { CheckIcon, FlameIcon, HashIcon, TrophyIcon, UserIcon, ZapIcon } from "../../components/icons.jsx";
+import { CheckIcon, FlameIcon, HashIcon, MoreIcon, TrophyIcon, UserIcon, ZapIcon } from "../../components/icons.jsx";
+import { IconButton, Popover } from "../../components/primitives/index.js";
 
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-700 dark:bg-slate-900";
@@ -76,15 +77,87 @@ function Avatar({ name, photoURL, className = "h-9 w-9", ring = "" }) {
 }
 
 const rowGrid =
-  "grid grid-cols-[2.25rem_1fr_4.5rem_3.75rem] items-center gap-3 px-2 md:grid-cols-[2.5rem_1fr_5.5rem_4.25rem_4.75rem_7.5rem] md:gap-4";
+  "grid grid-cols-[2.25rem_1fr_4.5rem_3.75rem_1.75rem] items-center gap-3 px-2 md:grid-cols-[2.5rem_1fr_5.5rem_4.25rem_4.75rem_7.5rem_1.75rem] md:gap-4";
 const headGrid =
-  "grid grid-cols-[2.25rem_1fr_4.5rem_3.75rem] items-center gap-3 px-2 md:grid-cols-[2.5rem_1fr_5.5rem_4.25rem_4.75rem_7.5rem] md:gap-4";
+  "grid grid-cols-[2.25rem_1fr_4.5rem_3.75rem_1.75rem] items-center gap-3 px-2 md:grid-cols-[2.5rem_1fr_5.5rem_4.25rem_4.75rem_7.5rem_1.75rem] md:gap-4";
 
 const headCell =
   "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500";
 const headIcon = "h-3.5 w-3.5 shrink-0";
 
-function BoardRow({ pos, entry, isMe, onRemove, onOpen }) {
+const menuItem =
+  "block w-full rounded-lg px-2.5 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
+const menuDanger =
+  "block w-full rounded-lg px-2.5 py-1.5 text-left text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/60";
+
+// Three-dot row menu: visit profile, copy link, remove from board.
+function RowMenu({ entry, isMe, busy, onVisit, onRemove }) {
+  const [open, setOpen] = useState(false);
+
+  const stop = (e) => e.stopPropagation();
+
+  const copyLink = async (e) => {
+    stop(e);
+    setOpen(false);
+    const url = `${window.location.origin}${window.location.pathname}#/u/${entry.uid}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // clipboard unavailable (http / permissions) — silently ignore
+    }
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      panelClassName="w-44"
+      trigger={
+        <IconButton
+          aria-label={`Actions for ${entry.displayName ?? "player"}`}
+          onClick={(e) => {
+            stop(e);
+            setOpen((v) => !v);
+          }}
+          className="text-slate-400 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+        >
+          <MoreIcon className="h-4 w-4" />
+        </IconButton>
+      }
+    >
+      <button
+        type="button"
+        className={menuItem}
+        onClick={(e) => {
+          stop(e);
+          setOpen(false);
+          onVisit();
+        }}
+      >
+        Visit profile
+      </button>
+      <button type="button" className={menuItem} onClick={copyLink}>
+        Copy profile link
+      </button>
+      {!isMe && onRemove && (
+        <button
+          type="button"
+          className={menuDanger}
+          disabled={busy}
+          onClick={(e) => {
+            stop(e);
+            setOpen(false);
+            onRemove();
+          }}
+        >
+          Remove from board
+        </button>
+      )}
+    </Popover>
+  );
+}
+
+function BoardRow({ pos, entry, isMe, busy, onRemove, onOpen }) {
   const s = entry.summary;
   return (
     <li
@@ -111,18 +184,6 @@ function BoardRow({ pos, entry, isMe, onRemove, onOpen }) {
               you
             </span>
           )}
-          {!isMe && onRemove && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              title="Remove connection"
-              className="rounded-md px-1 text-xs text-slate-300 opacity-0 transition hover:text-rose-600 group-hover:opacity-100 dark:text-slate-600"
-            >
-              ✕
-            </button>
-          )}
         </span>
       </span>
       <span className="text-center font-bold tabular-nums text-slate-900 dark:text-white">
@@ -142,6 +203,15 @@ function BoardRow({ pos, entry, isMe, onRemove, onOpen }) {
         ) : (
           <span className="text-[11px] italic text-slate-400">no data yet</span>
         )}
+      </span>
+      <span className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+        <RowMenu
+          entry={entry}
+          isMe={isMe}
+          busy={busy}
+          onVisit={() => onOpen?.(entry)}
+          onRemove={onRemove}
+        />
       </span>
     </li>
   );
@@ -335,6 +405,7 @@ export default function LeaderboardPage({ user }) {
                 <TrophyIcon className={`${headIcon} text-amber-500`} />
                 Rank
               </span>
+              <span aria-hidden="true" />
             </div>
             <ul className="mt-1">
               {board.map((b, i) => (
@@ -343,6 +414,7 @@ export default function LeaderboardPage({ user }) {
                   pos={i + 1}
                   entry={b}
                   isMe={b.isMe}
+                  busy={busy}
                   onOpen={openProfile}
                   onRemove={
                     b.isMe
