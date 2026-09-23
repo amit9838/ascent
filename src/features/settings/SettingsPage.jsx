@@ -12,6 +12,7 @@ import {
 } from "../../components/icons.jsx";
 import { applyBackup, exportProfile, parseBackup } from "./backup.js";
 import { AuthModal } from "../../components/AuthMenu.jsx";
+import { Avatar } from "../../components/primitives/index.js";
 import {
   deleteAccountAndCloudData,
   setDisplayName,
@@ -229,17 +230,11 @@ function AccountSection({ user, syncStatus }) {
       desc="Identity, cloud sync and sharing."
     >
       <div className="flex flex-wrap items-center gap-3 py-4 first:pt-2">
-        {user.photoURL ? (
-          <img
-            src={user.photoURL}
-            alt=""
-            className="h-10 w-10 rounded-full object-cover"
-          />
-        ) : (
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white">
-            {(user.displayName || user.email || "?").slice(0, 1).toUpperCase()}
-          </span>
-        )}
+        <Avatar
+          src={user.photoURL}
+          name={user.displayName || user.email}
+          className="h-10 w-10 text-sm"
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
             {user.displayName || "Solver"}

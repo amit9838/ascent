@@ -10,6 +10,7 @@ import {
 import { cloudEnabled } from "../lib/cloud/firebase.js";
 import { syncErrorHint } from "../lib/cloud/sync.js";
 import {
+  Avatar,
   Button,
   Divider,
   Field,
@@ -189,8 +190,6 @@ export default function AuthMenu({ user, status }) {
     );
   }
 
-  const initial = (user.displayName || user.email || "?").slice(0, 1).toUpperCase();
-
   return (
     <Popover
       open={open}
@@ -201,11 +200,11 @@ export default function AuthMenu({ user, status }) {
           className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100 text-sm font-bold text-slate-700 hover:ring-2 hover:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
           aria-label="Account"
         >
-          {user.photoURL ? (
-            <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
-          ) : (
-            initial
-          )}
+          <Avatar
+            src={user.photoURL}
+            name={user.displayName || user.email}
+            className="h-full w-full text-sm"
+          />
         </button>
       }
       panelClassName="w-56"

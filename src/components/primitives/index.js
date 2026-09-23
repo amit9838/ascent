@@ -10,3 +10,4 @@ export { Popover } from "./Popover.jsx";
 export { Badge } from "./Badge.jsx";
 export { Card, CARD_CLASS } from "./Card.jsx";
 export { Divider } from "./Divider.jsx";
+export { Avatar } from "./Avatar.jsx";

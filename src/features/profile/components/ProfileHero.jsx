@@ -1,4 +1,5 @@
 import { StatStrip } from "./StatStrip.jsx";
+import { Avatar } from "../../../components/primitives/index.js";
 
 // Premium header: solid card surface (white / slate-900), ringed avatar,
 // identity, CTA slot — with icon stat tiles at the bottom.
@@ -11,17 +12,11 @@ export function ProfileHero({ profile, summary, subtitle, actions, badge }) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
           <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
             <div className="shrink-0 rounded-full bg-gradient-to-br from-blue-400 via-indigo-400 to-violet-400 p-[3px]">
-              {profile.photoURL ? (
-                <img
-                  src={profile.photoURL}
-                  alt=""
-                  className="h-16 w-16 rounded-full border-2 border-white bg-slate-800 object-cover dark:border-slate-900 sm:h-24 sm:w-24"
-                />
-              ) : (
-                <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-blue-500 to-indigo-600 text-2xl font-bold text-white dark:border-slate-900 sm:h-24 sm:w-24 sm:text-3xl">
-                  {(profile.displayName ?? "S").slice(0, 1).toUpperCase()}
-                </span>
-              )}
+              <Avatar
+                src={profile.photoURL}
+                name={profile.displayName || "Solver"}
+                className="h-16 w-16 border-2 border-white text-2xl dark:border-slate-900 sm:h-24 sm:w-24 sm:text-3xl"
+              />
             </div>
 
             <div className="min-w-0 flex-1">
