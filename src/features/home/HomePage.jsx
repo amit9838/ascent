@@ -11,7 +11,7 @@ import {
   WeeklyGoalCard,
 } from "./dashboard.jsx";
 import { RewardsCard } from "./rewards.jsx";
-import { ArrowRightIcon, CheckIcon, ZapIcon } from "../../components/icons.jsx";
+import { ArrowRightIcon, CheckIcon } from "../../components/icons.jsx";
 
 const primaryBtn =
   "rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700";
@@ -22,14 +22,17 @@ function QotdCard({ qotd, done, onToggle, dimmed, ignored, onIgnore, onUnignore 
   const solved = Boolean(done[qotd.id]);
   return (
     <section
-      className={`mb-6 rounded-xl border border-slate-200 border-l-4 border-l-emerald-500 bg-white p-4 shadow-sm dark:border-slate-700 dark:border-l-emerald-500 dark:bg-slate-900 ${
+      className={`mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 ${
         dimmed ? "opacity-60" : ""
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            <ZapIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
             Question of the day &middot; {qotd.dateLabel}
             {ignored && !solved && (
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400">
