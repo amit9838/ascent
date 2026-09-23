@@ -16,14 +16,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   KEYS,
   getJSON,
-  getItem,
   removeItem,
-  setItem,
   setJSON,
   subscribe,
 } from "../db.js";
 import { loadFirestore } from "./firebase.js";
 import { mergeProgress, mergeRewards, lwwNewer } from "./merge.js";
+import { readNotesBlob, writeNotesBlob, clearAllNotes } from "../notes.js";
 import { computeSummary } from "./profileSummary.js";
 import { invalidateProfile } from "./follow.js";
 import {
@@ -65,13 +64,15 @@ export async function refreshProfileSummary(uid) {
 }
 
 async function readLocalValue(key) {
-  if (key === KEYS.notes) return await getItem(key);
+  // Notes live as per-note records locally; the cloud doc stays one
+  // aggregate JSON string (see lib/notes.js).
+  if (key === KEYS.notes) return await readNotesBlob();
   const fallback = key === KEYS.progress || key === KEYS.rewards ? {} : null;
   return await getJSON(key, fallback);
 }
 
 async function writeLocalValue(key, value) {
-  if (key === KEYS.notes) await setItem(key, value, "remote");
+  if (key === KEYS.notes) await writeNotesBlob(value, "remote");
   else await setJSON(key, value, "remote");
 }
 
@@ -195,7 +196,10 @@ export function useCloudSync(user) {
               `Cancel — replace this browser's data with the cloud copy`
           );
           if (!merge) {
-            for (const key of SYNCED_KEYS) await removeItem(key, "remote");
+            for (const key of SYNCED_KEYS) {
+              if (key === KEYS.notes) await clearAllNotes("remote");
+              else await removeItem(key, "remote");
+            }
           }
         }
 

@@ -3,6 +3,7 @@
 // (kept stable for backward compatibility).
 
 import { KEYS, getItem, getJSON, setItem, setJSON } from "../../lib/db.js";
+import { readNotesBlob, writeNotesBlob } from "../../lib/notes.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 
@@ -11,8 +12,14 @@ export async function exportProfile() {
   for (const [name, key] of Object.entries(KEYS)) {
     // qotdIgnored + cloudMeta are internal/local-only, not part of backups
     if (name === "qotdIgnored" || name === "cloudMeta") continue;
-    // notes/theme are stored as raw text, everything else as JSON
-    if (name === "notes" || name === "theme") {
+    // notes live as per-note records — export the aggregate blob;
+    // theme is raw text; everything else is already JSON
+    if (name === "notes") {
+      const raw = await readNotesBlob();
+      if (raw != null) data[name] = raw;
+      continue;
+    }
+    if (name === "theme") {
       const raw = await getItem(key);
       if (raw != null) data[name] = raw;
       continue;
@@ -94,7 +101,7 @@ export function parseBackup(json) {
     const out = {};
     const p = cleanProgress(d.progress ?? d.done);
     if (p) out.progress = p;
-    if (typeof d.notes === "string") out.notes = d.notes;
+    if (typeof d.notes === "string" || Array.isArray(d.notes)) out.notes = d.notes;
     const plans = cleanPlans(d.plans);
     if (plans) out.plans = plans;
     const rewards = cleanRewards(d.rewards);
@@ -115,7 +122,7 @@ export function parseBackup(json) {
 export async function applyBackup(parsed, currentDone) {
   let merged = currentDone;
   if (parsed.progress) merged = { ...currentDone, ...parsed.progress };
-  if (parsed.notes !== undefined) await setItem(KEYS.notes, parsed.notes);
+  if (parsed.notes !== undefined) await writeNotesBlob(parsed.notes, "local");
   if (parsed.plans !== undefined) await setJSON(KEYS.plans, parsed.plans);
   if (parsed.rewards !== undefined) await setJSON(KEYS.rewards, parsed.rewards);
   if (parsed.theme !== undefined) await setItem(KEYS.theme, parsed.theme);
