@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   authErrorMessage,
   requestPasswordReset,
@@ -9,14 +9,14 @@ import {
 } from "../lib/auth.js";
 import { cloudEnabled } from "../lib/cloud/firebase.js";
 import { syncErrorHint } from "../lib/cloud/sync.js";
-
-const primaryBtn =
-  "flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white";
-const googleBtn =
-  "flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700";
-const input =
-  "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
-const label = "block text-xs font-medium text-slate-600 dark:text-slate-300";
+import {
+  Button,
+  Divider,
+  Field,
+  Input,
+  Modal,
+  Popover,
+} from "./primitives/index.js";
 
 function GoogleMark() {
   return (
@@ -83,92 +83,76 @@ export function AuthModal({ onClose }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    <Modal
+      onClose={onClose}
+      title="Sign in to sync"
+      description="Optional — everything works offline. Signing in syncs your progress across devices and unlocks sharing."
     >
-      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Sign in to sync</h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Optional — everything works offline. Signing in syncs your progress
-          across devices and unlocks sharing.
-        </p>
+      <Button
+        variant="secondary"
+        onClick={google}
+        disabled={busy}
+        className="mt-4 w-full"
+      >
+        <GoogleMark /> Continue with Google
+      </Button>
 
-        <button onClick={google} disabled={busy} className={`${googleBtn} mt-4`}>
-          <GoogleMark /> Continue with Google
-        </button>
+      <Divider label="or" className="my-4" />
 
-        <div className="my-4 flex items-center gap-3 text-xs text-slate-400">
-          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-          or
-          <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-        </div>
+      <form onSubmit={submit}>
+        <Field label="Email">
+          <Input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+        </Field>
+        <Field label="Password" className="mt-3">
+          <Input
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          />
+        </Field>
+        {error && (
+          <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>
+        )}
+        {notice && (
+          <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400">
+            {notice}
+          </p>
+        )}
+        <Button type="submit" loading={busy} className="mt-4 w-full">
+          {mode === "signin" ? "Sign in" : "Create account"}
+        </Button>
+      </form>
 
-        <form onSubmit={submit}>
-          <label className={label}>
-            Email
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={input}
-              autoComplete="email"
-            />
-          </label>
-          <label className={`${label} mt-3`}>
-            Password
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={input}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            />
-          </label>
-          {error && (
-            <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>
-          )}
-          {notice && (
-            <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400">{notice}</p>
-          )}
-          <button type="submit" disabled={busy} className={`${primaryBtn} mt-4`}>
-            {busy ? "…" : mode === "signin" ? "Sign in" : "Create account"}
-          </button>
-        </form>
-
-        <div className="mt-4 flex items-center justify-between text-xs">
-          <button
-            onClick={() => {
-              setMode(mode === "signin" ? "signup" : "signin");
-              setError("");
-              setNotice("");
-            }}
-            className="text-blue-600 hover:underline dark:text-blue-400"
-          >
-            {mode === "signin"
-              ? "Need an account? Sign up"
-              : "Have an account? Sign in"}
-          </button>
-          {mode === "signin" && (
-            <button onClick={forgot} className="text-slate-500 hover:underline dark:text-slate-400">
-              Forgot password?
-            </button>
-          )}
-        </div>
+      <div className="mt-4 flex items-center justify-between text-xs">
+        <Button
+          variant="link"
+          size="xs"
+          onClick={() => {
+            setMode(mode === "signin" ? "signup" : "signin");
+            setError("");
+            setNotice("");
+          }}
+        >
+          {mode === "signin"
+            ? "Need an account? Sign up"
+            : "Have an account? Sign in"}
+        </Button>
+        {mode === "signin" && (
+          <Button variant="ghost" size="xs" onClick={forgot}>
+            Forgot password?
+          </Button>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -193,28 +177,13 @@ function statusText(status) {
 export default function AuthMenu({ user, status }) {
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState(false);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
 
   if (!cloudEnabled()) return null;
 
   if (!user) {
     return (
       <>
-        <button
-          onClick={() => setModal(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-        >
-          Sign in
-        </button>
+        <Button onClick={() => setModal(true)}>Sign in</Button>
         {modal && <AuthModal onClose={() => setModal(false)} />}
       </>
     );
@@ -223,42 +192,48 @@ export default function AuthMenu({ user, status }) {
   const initial = (user.displayName || user.email || "?").slice(0, 1).toUpperCase();
 
   return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100 text-sm font-bold text-slate-700 hover:ring-2 hover:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-        aria-label="Account"
-      >
-        {user.photoURL ? (
-          <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
-        ) : (
-          initial
-        )}
-      </button>
-      {open && (
-        <div className="absolute right-0 z-40 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-xl dark:border-slate-700 dark:bg-slate-900">
-          <p className="truncate font-medium">{user.displayName || "Signed in"}</p>
-          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
-          <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(status)}`} />
-            {statusText(status)}
-          </div>
-          {status?.state === "error" && (
-            <p className="mt-1 rounded-md bg-rose-50 p-2 text-[11px] leading-snug text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
-              {syncErrorHint(status)}
-            </p>
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100 text-sm font-bold text-slate-700 hover:ring-2 hover:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+          aria-label="Account"
+        >
+          {user.photoURL ? (
+            <img src={user.photoURL} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initial
           )}
-          <button
-            onClick={async () => {
-              setOpen(false);
-              await signOutUser().catch(() => {});
-            }}
-            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-left text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            Sign out (keep local data)
-          </button>
-        </div>
+        </button>
+      }
+      panelClassName="w-56"
+    >
+      <p className="truncate font-medium">{user.displayName || "Signed in"}</p>
+      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+        {user.email}
+      </p>
+      <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(status)}`} />
+        {statusText(status)}
+      </div>
+      {status?.state === "error" && (
+        <p className="mt-1 rounded-md bg-rose-50 p-2 text-[11px] leading-snug text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+          {syncErrorHint(status)}
+        </p>
       )}
-    </div>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="mt-2 w-full"
+        onClick={async () => {
+          setOpen(false);
+          await signOutUser().catch(() => {});
+        }}
+      >
+        Sign out (keep local data)
+      </Button>
+    </Popover>
   );
 }
