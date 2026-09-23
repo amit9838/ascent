@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { cloudEnabled, loadFirebaseAuth, loadFirestore } from "./cloud/firebase.js";
 import { KEYS } from "./db.js";
+import { clearCache } from "./cache.js";
 
 let kit = null;
 const authKit = () => (kit ??= loadFirebaseAuth());
@@ -61,6 +62,7 @@ export async function requestPasswordReset(email) {
 export async function signOutUser() {
   const { auth, m } = await authKit();
   await m.signOut(auth);
+  clearCache(); // no cached profiles/relations leak across accounts
 }
 
 export async function setDisplayName(name) {
@@ -91,6 +93,7 @@ export async function deleteAccountAndCloudData() {
     }
   }
   await m.deleteUser(user);
+  clearCache();
 }
 
 // Friendly message for auth error codes shown in the sign-in modal.

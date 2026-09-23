@@ -20,9 +20,18 @@
 import { getProfile } from "./follow.js";
 import { computeSummary } from "./profileSummary.js";
 import { loadFirestore } from "./firebase.js";
+import { cached, invalidateTag } from "../cache.js";
 
 let kit = null;
 const fs = () => (kit ??= loadFirestore());
+
+// Relation caches are tagged per user pair so any mutation for that pair
+// (invite / accept / reject / remove) can drop them in one call.
+const relTag = (a, b) => `rel:${a}:${b}`;
+function invalidateRel(a, b) {
+  invalidateTag(relTag(a, b));
+  invalidateTag(relTag(b, a));
+}
 
 // Tags failures with the step that caused them, so permission errors say
 // exactly which operation the cloud rejected.
@@ -107,6 +116,7 @@ export async function sendInviteToUid(myUid, targetUid, email = "") {
         createdAt: now,
       })
   );
+  invalidateRel(myUid, targetUid);
 }
 
 export async function sendInvite(myUid, email) {
@@ -127,21 +137,34 @@ export async function sendInvite(myUid, email) {
   return sendInviteToUid(myUid, targetUid, addr);
 }
 
-// Connection status helpers for profile pages.
-export async function isConnected(myUid, peerUid) {
-  const { db, m } = await fs();
-  const snap = await m
-    .getDoc(m.doc(db, "users", myUid, "connections", peerUid))
-    .catch(() => null);
-  return Boolean(snap?.exists());
+// Connection status helpers for profile pages — cached per pair so page
+// visits don't re-read Firestore on every render/navigation.
+export function isConnected(myUid, peerUid) {
+  return cached(
+    `conn:${myUid}:${peerUid}`,
+    async () => {
+      const { db, m } = await fs();
+      const snap = await m
+        .getDoc(m.doc(db, "users", myUid, "connections", peerUid))
+        .catch(() => null);
+      return Boolean(snap?.exists());
+    },
+    { ttl: 30_000, tags: [relTag(myUid, peerUid)] }
+  );
 }
 
-export async function getSentStatus(myUid, peerUid) {
-  const { db, m } = await fs();
-  const snap = await m
-    .getDoc(m.doc(db, "users", myUid, "sent", peerUid))
-    .catch(() => null);
-  return snap?.exists() ? snap.data()?.status ?? null : null;
+export function getSentStatus(myUid, peerUid) {
+  return cached(
+    `sent:${myUid}:${peerUid}`,
+    async () => {
+      const { db, m } = await fs();
+      const snap = await m
+        .getDoc(m.doc(db, "users", myUid, "sent", peerUid))
+        .catch(() => null);
+      return snap?.exists() ? snap.data()?.status ?? null : null;
+    },
+    { ttl: 30_000, tags: [relTag(myUid, peerUid)] }
+  );
 }
 
 const byNewest = (a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1);
@@ -209,6 +232,8 @@ export async function acceptInvite(myUid, invite) {
     "clearing the invite",
     () => m.deleteDoc(m.doc(db, "users", myUid, "invites", from))
   );
+  invalidateRel(myUid, from);
+  invalidateTag(`conns:${myUid}`);
 }
 
 export async function rejectInvite(myUid, invite) {
@@ -229,12 +254,19 @@ export async function rejectInvite(myUid, invite) {
     "clearing the invite",
     () => m.deleteDoc(m.doc(db, "users", myUid, "invites", from))
   );
+  invalidateRel(myUid, from);
 }
 
-export async function listConnections(uid) {
-  const { db, m } = await fs();
-  const snap = await m.getDocs(m.collection(db, "users", uid, "connections"));
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+export function listConnections(uid) {
+  return cached(
+    `conns:${uid}`,
+    async () => {
+      const { db, m } = await fs();
+      const snap = await m.getDocs(m.collection(db, "users", uid, "connections"));
+      return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    },
+    { ttl: 30_000, tags: [`conns:${uid}`] }
+  );
 }
 
 // Removes both sides of a connection.
@@ -242,6 +274,9 @@ export async function removeConnection(myUid, peerUid) {
   const { db, m } = await fs();
   await m.deleteDoc(m.doc(db, "users", myUid, "connections", peerUid));
   await m.deleteDoc(m.doc(db, "users", peerUid, "connections", myUid)).catch(() => {});
+  invalidateRel(myUid, peerUid);
+  invalidateTag(`conns:${myUid}`);
+  invalidateTag(`conns:${peerUid}`);
 }
 
 // Pushes my current name + photo + stats into every peer's leaderboard
