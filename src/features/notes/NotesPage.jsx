@@ -35,6 +35,7 @@ export default function NotesPage() {
   const [listOpen, setListOpen] = useState(false); // modal closed by default
   const [savedAt, setSavedAt] = useState(null);
   const [ready, setReady] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
 
   const dirtyUntil = useRef(0);
   const pendingRef = useRef(new Map()); // id → note awaiting debounced write
@@ -114,6 +115,11 @@ export default function NotesPage() {
   const listNotesRef = useRef(null);
   listNotesRef.current = listNotes;
 
+  // Switching notes always returns the title to its h4 form.
+  useEffect(() => {
+    setEditingTitle(false);
+  }, [active?.id]);
+
   const touch = () => {
     dirtyUntil.current = Date.now() + 2500;
   };
@@ -147,7 +153,7 @@ export default function NotesPage() {
     setActive(n);
     scheduleSave(n);
     setListOpen(false); // show the new note in the editor
-    requestAnimationFrame(() => titleRef.current?.focus());
+    setEditingTitle(true); // jump straight into titling it
   };
 
   const removeNote = (id) => {
@@ -167,6 +173,7 @@ export default function NotesPage() {
   const selectNote = (note) => {
     flush(); // don't lose the previous note's tail edits
     setActive(note);
+    setEditingTitle(false);
     setListOpen(false);
   };
 
@@ -209,35 +216,29 @@ export default function NotesPage() {
   const lines = active ? active.body.split("\n").length : 0;
   const nearLimit = active && active.body.length >= BODY_LIMIT * 0.95;
 
+  const options = (
+    <div className="order-1 flex flex-wrap items-center gap-2 md:order-2 md:ml-auto">
+      <Button size="sm" variant="secondary" onClick={openList}>
+        <NotesIcon className="h-4 w-4" /> All notes
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={addNote}
+        disabled={atLimit}
+        title={atLimit ? `Limit reached (${MAX_NOTES} notes)` : undefined}
+      >
+        New note
+      </Button>
+      <Button size="sm" variant="secondary" onClick={download} disabled={!active}>
+        <DownloadIcon className="h-4 w-4" /> Download .txt
+      </Button>
+    </div>
+  );
+
   return (
     <div className="flex min-h-[calc(100dvh-6.5rem)] flex-col">
       <BackLink />
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Notes</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Plain text, autosaved — max {MAX_NOTES} notes,{" "}
-            {BODY_LIMIT.toLocaleString()} characters each.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="secondary" onClick={openList}>
-            <NotesIcon className="h-4 w-4" /> All notes
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={addNote}
-            disabled={atLimit}
-            title={atLimit ? `Limit reached (${MAX_NOTES} notes)` : undefined}
-          >
-            New note
-          </Button>
-          <Button size="sm" variant="secondary" onClick={download} disabled={!active}>
-            <DownloadIcon className="h-4 w-4" /> Download .txt
-          </Button>
-        </div>
-      </div>
 
       {/* Notes list modal — closed by default; bodies lazy-load on first open */}
       <Modal
@@ -308,17 +309,48 @@ export default function NotesPage() {
 
       {/* Editor — stretches so the textarea reaches the bottom of the page */}
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
+        {/* Title + options: options above the title on phones, same row on desktop */}
+        <div className="flex shrink-0 flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          {active && (
+            <div className="order-2 min-w-0 md:order-1">
+              {editingTitle ? (
+                <input
+                  ref={titleRef}
+                  type="text"
+                  value={active.title}
+                  maxLength={TITLE_LIMIT}
+                  autoFocus
+                  onChange={(e) => patchActive({ title: e.target.value })}
+                  onBlur={() => {
+                    setEditingTitle(false);
+                    flush(); // click-away saves immediately
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "Escape") e.currentTarget.blur();
+                  }}
+                  placeholder="Title"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-lg font-semibold outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+                />
+              ) : (
+                <h4
+                  onClick={() => setEditingTitle(true)}
+                  title="Click to edit title"
+                  className="cursor-text truncate text-lg font-semibold text-slate-900 dark:text-white"
+                >
+                  {active.title || (
+                    <span className="font-normal text-slate-400 dark:text-slate-500">
+                      Untitled
+                    </span>
+                  )}
+                </h4>
+              )}
+            </div>
+          )}
+          {options}
+        </div>
+
         {active ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <input
-              ref={titleRef}
-              type="text"
-              value={active.title}
-              maxLength={TITLE_LIMIT}
-              onChange={(e) => patchActive({ title: e.target.value })}
-              placeholder="Title"
-              className="w-full shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
-            />
             <textarea
               value={active.body}
               maxLength={BODY_LIMIT}
@@ -346,6 +378,12 @@ export default function NotesPage() {
             )}
           </div>
         )}
+
+        {/* Page-bottom note */}
+        <p className="mt-3 shrink-0 text-xs text-slate-400 dark:text-slate-500">
+          Plain text, autosaved — max {MAX_NOTES} notes,{" "}
+          {BODY_LIMIT.toLocaleString()} characters each.
+        </p>
       </div>
     </div>
   );
