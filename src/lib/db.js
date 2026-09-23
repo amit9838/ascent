@@ -5,9 +5,9 @@
 // compatibility with exported backup files.
 //
 // Backend: one database ("ascent-db", v1) with a single object store
-// ("kv") holding key -> value pairs (out-of-line keys). Raw-text values
-// (notes, theme) are stored as strings; everything else is stored as
-// structured-cloneable JSON values.
+// ("kv") holding key -> value pairs (out-of-line keys). String values
+// (theme, notes index metadata via JSON) may be stored as strings;
+// everything else is stored as structured-cloneable JSON values.
 //
 // NOTE: every function here is async — callers must `await` reads/writes.
 
@@ -39,7 +39,7 @@ export function subscribe(listener) {
   return () => listeners.delete(listener);
 }
 
-function notify(key, source) {
+export function notify(key, source) {
   for (const l of [...listeners]) {
     try {
       l(key, source);
