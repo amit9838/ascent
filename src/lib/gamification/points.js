@@ -1,6 +1,6 @@
 // Points: easy = 1, medium = 2, hard = 3. Derived from CSV difficulty
 // at computation time, so no storage migration is ever needed.
-import { F } from "./csv.js";
+import { F } from "../csv.js";
 
 export const POINTS_BY_DIFFICULTY = { easy: 1, medium: 2, hard: 3 };
 

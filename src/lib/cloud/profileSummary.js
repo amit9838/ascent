@@ -5,9 +5,9 @@
 
 import { TOPICS } from "../../data/topics.js";
 import { loadTopicCsv } from "../csv.js";
-import { buildPointsMap, pointsOf } from "../points.js";
-import { currentStreak } from "../activity.js";
-import { currentRank } from "../titles.js";
+import { buildPointsMap, pointsOf } from "../gamification/points.js";
+import { currentStreak } from "../gamification/activity.js";
+import { currentRank } from "../gamification/titles.js";
 import { KEYS, getJSON } from "../db.js";
 
 let topicDataPromise = null;

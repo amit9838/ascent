@@ -4,7 +4,7 @@
 // weekly: { "<monday YYYY-MM-DD>": "earned" | "collected" } }
 
 import { dayKey, dayPoints, weekStart } from "./activity.js";
-import { KEYS, getJSON, setJSON, removeItem } from "./db.js";
+import { KEYS, getJSON, setJSON, removeItem } from "../db.js";
 
 async function loadState() {
   const v = await getJSON(KEYS.rewards, null);

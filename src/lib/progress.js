@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { resetRewards } from "./rewards.js";
+import { resetRewards } from "./gamification/rewards.js";
 import { KEYS, getJSON, setJSON, subscribe } from "./db.js";
 
 export async function loadProgress() {

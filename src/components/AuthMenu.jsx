@@ -7,7 +7,7 @@ import {
   signUpEmail,
   signOutUser,
 } from "../lib/auth.js";
-import { cloudEnabled } from "../lib/firebase.js";
+import { cloudEnabled } from "../lib/cloud/firebase.js";
 import { syncErrorHint } from "../lib/cloud/sync.js";
 
 const primaryBtn =

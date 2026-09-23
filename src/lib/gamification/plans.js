@@ -2,7 +2,7 @@
 // Shape: { weeklyTarget: number, months: { "YYYY-MM": [topicSlug, ...] } }
 
 import { useEffect, useState } from "react";
-import { KEYS, getJSON, setJSON, subscribe } from "./db.js";
+import { KEYS, getJSON, setJSON, subscribe } from "../db.js";
 
 export const DEFAULT_WEEKLY_TARGET = 21;
 

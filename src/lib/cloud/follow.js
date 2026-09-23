@@ -4,7 +4,7 @@
 // the target's shareEnabled flag. (profiles is top-level: Firestore doc
 // paths need an even number of segments.)
 
-import { loadFirestore } from "../firebase.js";
+import { loadFirestore } from "./firebase.js";
 
 let kit = null;
 const fs = () => (kit ??= loadFirestore());

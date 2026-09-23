@@ -22,7 +22,7 @@ import {
   setJSON,
   subscribe,
 } from "../db.js";
-import { loadFirestore } from "../firebase.js";
+import { loadFirestore } from "./firebase.js";
 import { mergeProgress, mergeRewards, lwwNewer } from "./merge.js";
 import { computeSummary } from "./profileSummary.js";
 import {

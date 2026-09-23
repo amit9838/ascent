@@ -19,7 +19,7 @@
 
 import { getProfile } from "./follow.js";
 import { computeSummary } from "./profileSummary.js";
-import { loadFirestore } from "../firebase.js";
+import { loadFirestore } from "./firebase.js";
 
 let kit = null;
 const fs = () => (kit ??= loadFirestore());
