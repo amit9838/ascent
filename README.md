@@ -22,7 +22,7 @@
 - **Topic-wise practice** — 250 problems across 14 topics (Arrays → DP → Graphs), sourced from the [workat.tech index](https://workat.tech/problem-solving/practice/topics/index.html) with LeetCode/GeeksforGeeks equivalents
 - **Progress tracking** — one-click solve toggle, per-topic progress bars, points weighted by difficulty
 - **Gamification** — daily targets, weekly goals, Daybreak Stars & Sapphire Crowns, a rank ladder from *First Light* to *Crown Jewel*, streak & consistency titles
-- **Notes** — private per-problem notes with debounce autosave
+- **Notes** — up to 10 private plain-text notes (12k characters each), one storage record per note, collapsible list, debounce autosave
 - **Leaderboard & social** — invite friends by email, accept/reject connections, live rankings, public profile sharing (you choose what's shared)
 - **Cloud sync (optional)** — Firebase Auth (Google + email) with Firestore merge-based sync; runs **100% local/offline** when unconfigured
 - **Local-first storage** — IndexedDB, dark mode, import/export JSON backups
