@@ -10,6 +10,7 @@ import type { Profile } from "../../lib/cloud/follow.js";
 import {
   acceptInvite,
   clearFinishedSentInvites,
+  ensureConnection,
   rejectInvite,
   removeConnection,
   sendInvite,
@@ -362,6 +363,29 @@ export default function LeaderboardPage({ user }: { user: User | null }) {
     ];
     return () => unsubs.forEach((u) => u());
   }, [user?.uid]);
+
+  // Inviter side of accepted invites: the invitee can't write my list
+  // (owner-only rules), so I add them myself when I see "accepted".
+  useEffect(() => {
+    const me = user?.uid;
+    if (!me) return;
+    const missing = sent.filter(
+      (s) => s.status === "accepted" && s.uid && !rows.some((r) => r.uid === s.uid)
+    );
+    if (!missing.length) return;
+    let cancelled = false;
+    (async () => {
+      for (const s of missing) {
+        if (cancelled) return;
+        await ensureConnection(me, s.uid).catch((err) =>
+          console.warn("[leaderboard] ensure connection failed", err)
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sent, rows, user?.uid]);
 
   useEffect(() => {
     const wanted = new Set(rows.map((r) => r.uid));

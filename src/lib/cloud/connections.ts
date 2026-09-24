@@ -252,26 +252,14 @@ export async function clearFinishedSentInvites(uid: string): Promise<number> {
 
 export async function acceptInvite(myUid: string, invite: Invite): Promise<void> {
   const from = invite.uid;
-  const [info, inviterProfile] = await Promise.all([
-    myProfileInfo(myUid),
-    getProfile(from).catch(() => null),
-  ]);
+  const inviterProfile = await getProfile(from).catch(() => null);
   const now = new Date().toISOString();
   const { db, m } = await fs();
-  // My identity entry in the inviter's leaderboard.
-  await step(
-    "adding me to their leaderboard",
-    () =>
-      m.setDoc(m.doc(db, "users", from, "connections", myUid), {
-        uid: myUid,
-        displayName: info.displayName,
-        photoURL: info.photoURL,
-        connectedAt: now,
-        updatedAt: now,
-      })
-  );
-  // The inviter's identity entry in my leaderboard. Their stats are read
-  // live from their public profile — never stamped here.
+  // Owner-only connections (see firestore.rules): each side writes only
+  // their own list. I add the inviter to mine here; the inviter adds me
+  // to theirs when they observe my accepted status (ensureConnection).
+  // The inviter's stats are read live from their public profile — never
+  // stamped here.
   await step(
     "adding them to my leaderboard",
     () =>
@@ -283,7 +271,9 @@ export async function acceptInvite(myUid: string, invite: Invite): Promise<void>
         updatedAt: now,
       })
   );
-  // Tell the inviter their invite was accepted.
+  // Tell the inviter their invite was accepted. They add me to their
+  // own leaderboard when they observe this status (ensureConnection).
+  const info = await myProfileInfo(myUid);
   await step(
     "updating the sent-invite status",
     () =>
@@ -335,14 +325,40 @@ export function listConnections(uid: string): Promise<Connection[]> {
   );
 }
 
-// Removes both sides of a connection.
+// Inviter side of an accepted invite: add the peer to MY leaderboard if
+// not there yet. Called when I observe an accepted sent-invite status —
+// the invitee cannot write my list (owner-only rules), so I do it myself.
+export async function ensureConnection(myUid: string, peerUid: string): Promise<void> {
+  if (!myUid || !peerUid || myUid === peerUid) return;
+  const { db, m } = await fs();
+  const existing = await m
+    .getDoc(m.doc(db, "users", myUid, "connections", peerUid))
+    .catch(() => null);
+  if (existing?.exists()) return;
+  const profile = await getProfile(peerUid).catch(() => null);
+  const now = new Date().toISOString();
+  await step(
+    "adding them to my leaderboard",
+    () =>
+      m.setDoc(m.doc(db, "users", myUid, "connections", peerUid), {
+        uid: peerUid,
+        displayName: profile?.displayName ?? "Solver",
+        photoURL: profile?.photoURL ?? "",
+        connectedAt: now,
+        updatedAt: now,
+      })
+  );
+  invalidateRel(myUid, peerUid);
+  invalidateTag(`conns:${myUid}`);
+}
+
+// Removes my side of a connection. Owner-only rules mean the peer keeps
+// their own entry until they remove me too (unfollow semantics).
 export async function removeConnection(myUid: string, peerUid: string): Promise<void> {
   const { db, m } = await fs();
   await m.deleteDoc(m.doc(db, "users", myUid, "connections", peerUid));
-  await m.deleteDoc(m.doc(db, "users", peerUid, "connections", myUid)).catch(() => {});
   invalidateRel(myUid, peerUid);
   invalidateTag(`conns:${myUid}`);
-  invalidateTag(`conns:${peerUid}`);
 }
 
 // --- live subscriptions (leaderboard auto-refresh) ---
