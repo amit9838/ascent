@@ -3,19 +3,31 @@ rules_version = '2';
 // Ascent Firestore rules — deploy by pasting into:
 // Firebase console → Firestore Database → Rules.
 //
-// Model: users/{uid}/state/{doc}      private synced data (owner only)
-//        users/{uid}/following/*      legacy compare-follow list (owner only)
-//        users/{uid}/invites/{from}   invites I received
-//        users/{uid}/sent/{to}        invites I sent (status mirror)
-//        users/{uid}/connections/{p}  my leaderboard connections
-//        users/{uid}/sharedWithMe/{n} notes shared with me (discovery inbox)
-//        sharedNotes/{noteId}         collaborative notes: owner + members
-//                                     may read; owner manages members;
-//                                     members may edit title/body only
-//        profiles/{uid}               public stats (readable only when shared)
-//        emails/{sha256(email)}       email -> uid index for invites
+// Model: users/{uid}/solves/{id}       my solves (owner only)
+//        users/{uid}/notes/{id}        my private notes (owner only)
+//        users/{uid}/rewardEvents/{id} my reward events (owner only)
+//        users/{uid}/settings/preferences my targets (owner only)
+//        users/{uid}/invites/{from}    invites I received
+//        users/{uid}/sent/{to}         invites I sent (status mirror)
+//        users/{uid}/connections/{p}   my leaderboard connections (identity only)
+//        users/{uid}/sharedWithMe/{n}  notes shared with me (discovery inbox)
+//        sharedNotes/{noteId}          collaborative notes: owner + members
+//                                      may read; owner manages members;
+//                                      members may edit title/body only
+//        profiles/{uid}                public stats (readable only when shared)
+//        emails/{sha256(email)}        email -> uid index for invites
 //
 // Default deny: anything not matched above is inaccessible.
+//
+// Delete-account contract (auth.js deleteAccountAndCloudData wipes, in
+// order, before the auth user is removed): every doc under
+// users/{uid}/{solves,notes,rewardEvents,invites,sent,connections,
+// sharedWithMe}, the users/{uid}/settings/preferences doc, profiles/{uid}, every
+// sharedNotes/{id} with ownerUid == uid (plus each member's inbox entry,
+// permitted by the owner-delete rule above), and emails/{sha256(email)}.
+// Counterpart rows inside OTHER users' trees (their connections/{me} and
+// sent mirrors) can't be enumerated client-side and are left to read as
+// "no data yet" through the profile-gated leaderboard.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isOwner(uid) {
@@ -23,11 +35,25 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      match /state/{doc} {
+      // Per-record LWW sync: whole records, real fields (queryable).
+      match /solves/{problemId} {
         allow read, write: if isOwner(uid);
       }
 
-      match /following/{targetUid} {
+      match /notes/{noteId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && (!("body" in request.resource.data)
+              || request.resource.data.body.size() < 12000);
+      }
+
+      match /rewardEvents/{eventId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.status in ["earned", "collected"];
+      }
+
+      match /settings/{docId} {
         allow read, write: if isOwner(uid);
       }
 
@@ -57,28 +83,26 @@ service cloud.firestore {
         allow delete: if isOwner(uid);
       }
 
-      // My leaderboard connections. Each entry is ABOUT the peer
-      // (data.uid == peerUid). The peer may create/update their own
-      // entry in my list (their name + stats) and delete it (leave).
+      // My leaderboard connections: identity only (name + photo). Stats
+      // are read live from each peer's public profile, so peers never
+      // write here — owner-only.
       match /connections/{peerUid} {
-        allow read: if isOwner(uid);
-        allow create, update: if isOwner(uid)
-          || (request.auth != null && request.auth.uid == peerUid
-              && request.resource.data.uid == peerUid);
-        allow delete: if isOwner(uid)
-          || (request.auth != null && request.auth.uid == peerUid
-              && resource.data.uid == peerUid);
+        allow read, write: if isOwner(uid);
       }
 
       // Notes shared with me. The owner (note creator) writes my inbox
       // entry when sharing; I read it to discover the note and delete it
-      // to leave. The owner may refresh my entry's title after edits.
+      // to leave. The owner may refresh my entry's title after edits —
+      // and may delete my entry when they delete their account or
+      // unshare, so no ghost inbox entries survive them.
       match /sharedWithMe/{noteId} {
         allow read, delete: if isOwner(uid);
         allow create: if request.auth != null
           && request.resource.data.ownerUid == request.auth.uid;
         allow update: if isOwner(uid)
           || (request.auth != null && request.auth.uid == resource.data.ownerUid);
+        allow delete: if request.auth != null
+          && request.auth.uid == resource.data.ownerUid;
       }
     }
 
@@ -125,11 +149,15 @@ service cloud.firestore {
 
     // Email -> uid index. Keys are SHA-256 hashes so the index can't be
     // enumerated. Any signed-in user may resolve one hash (to send an
-    // invite); you may only register your own email.
+    // invite); you may only register your own email — and only you can
+    // remove it (account deletion). Split from `write` because deletes
+    // have no request.resource to check.
     match /emails/{emailHash} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow create, update: if request.auth != null
         && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
     }
   }
 }
