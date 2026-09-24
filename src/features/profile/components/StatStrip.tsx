@@ -1,35 +1,48 @@
+import type { ComponentType } from "react";
 import {
   CheckIcon,
   FlameIcon,
   TrophyIcon,
   ZapIcon,
 } from "../../../components/icons.jsx";
+import type { ProfileSummary } from "../../../lib/cloud/profileSummary.ts";
 
 // Icon + value stat tiles — no totals, no floating boxes.
-export function StatStrip({ summary: s, className = "" }) {
-  const items = [
+export function StatStrip({
+  summary: s,
+  className = "",
+}: {
+  summary?: ProfileSummary | null;
+  className?: string;
+}) {
+  const items: Array<{
+    icon: ComponentType<{ className?: string }>;
+    label: string;
+    value: string;
+    tone: string;
+  }> = [
     {
       icon: CheckIcon,
       label: "Solved",
-      value: `${s.solved ?? 0}`,
+      value: `${s?.solved ?? 0}`,
       tone: "text-emerald-600 bg-emerald-500/15 dark:text-emerald-400",
     },
     {
       icon: ZapIcon,
       label: "Points",
-      value: `${s.points ?? 0}`,
+      value: `${s?.points ?? 0}`,
       tone: "text-amber-600 bg-amber-500/15 dark:text-amber-400",
     },
     {
       icon: FlameIcon,
       label: "Streak",
-      value: `${s.streak ?? 0}`,
+      value: `${s?.streak ?? 0}`,
       tone: "text-orange-600 bg-orange-500/15 dark:text-orange-400",
     },
     {
       icon: TrophyIcon,
       label: "Rank",
-      value: `${s.rank ?? "—"}`,
+      value: `${s?.rank ?? "—"}`,
       tone: "text-amber-500 bg-amber-500/15",
     },
   ];

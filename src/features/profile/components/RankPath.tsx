@@ -1,16 +1,17 @@
-import { currentRank, rankLadder } from "../../../lib/gamification/titles.js";
+import { currentRank, rankLadder } from "../../../lib/gamification/titles.ts";
+import type { RankStep } from "../../../lib/gamification/titles.ts";
 import { CheckIcon, TrophyIcon } from "../../../components/icons.jsx";
 import { CARD } from "./card.js";
 import { SectionHead } from "./SectionHead.jsx";
 
-function rankReq(r, total) {
+function rankReq(r: RankStep, total: number): string {
   if (r.solves === 1) return "Solve your first problem";
   if (r.solves >= total) return `Solve all ${total}`;
   return `Solve ${r.solves}`;
 }
 
 // Progress-to-next-rank bar + full ladder checklist.
-export function RankPath({ solved, total }) {
+export function RankPath({ solved, total }: { solved: number; total: number }) {
   const { current, next } = currentRank(solved, total);
   const base = current?.solves ?? 0;
   const target = next?.solves ?? total;

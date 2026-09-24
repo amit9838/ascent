@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import type { User } from "firebase/auth";
 import { Link } from "react-router-dom";
 import {
   BackIcon,
@@ -11,6 +13,7 @@ import {
   UserIcon,
 } from "../../components/icons.jsx";
 import { applyBackup, exportProfile, parseBackup } from "./backup.js";
+import type { ParsedBackup } from "./backup.ts";
 import { AuthModal } from "../../components/AuthMenu.jsx";
 import { Avatar } from "../../components/primitives/index.js";
 import {
@@ -20,8 +23,8 @@ import {
 } from "../../lib/auth.js";
 import { cloudEnabled } from "../../lib/cloud/firebase.js";
 import { getProfile, updateProfileDoc } from "../../lib/cloud/follow.js";
-import { refreshProfileSummary, syncErrorHint } from "../../lib/cloud/sync.js";
-import { refreshConnectionSummaries } from "../../lib/cloud/connections.js";
+import { refreshProfileSummary, syncErrorHint } from "../../lib/cloud/sync.ts";
+import type { SyncStatus } from "../../lib/cloud/sync/engine.ts";
 
 // Priority order: Account (identity/sync) → Data (safety) → Appearance
 // (preference) → Danger zone (destructive, always last, isolated).
@@ -42,7 +45,21 @@ const btnDanger =
 const inputCls =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
 
-function Section({ icon, chip, title, desc, children, danger = false }) {
+function Section({
+  icon,
+  chip,
+  title,
+  desc,
+  children,
+  danger = false,
+}: {
+  icon: ReactNode;
+  chip: string;
+  title: string;
+  desc: string;
+  children?: ReactNode;
+  danger?: boolean;
+}) {
   return (
     <section className={danger ? dangerCls : sectionCls}>
       <div className="flex items-start gap-3.5">
@@ -67,7 +84,17 @@ function Section({ icon, chip, title, desc, children, danger = false }) {
   );
 }
 
-function Row({ title, desc, children, wide = false }) {
+function Row({
+  title,
+  desc,
+  children,
+  wide = false,
+}: {
+  title: string;
+  desc?: string;
+  children?: ReactNode;
+  wide?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-2.5 py-4 first:pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0 sm:max-w-md">
@@ -95,7 +122,17 @@ function Row({ title, desc, children, wide = false }) {
   );
 }
 
-function Switch({ checked, onChange, disabled = false, label }) {
+function Switch({
+  checked,
+  onChange,
+  disabled = false,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  label: string;
+}) {
   return (
     <button
       type="button"
@@ -117,18 +154,18 @@ function Switch({ checked, onChange, disabled = false, label }) {
   );
 }
 
-function statusLine(syncStatus) {
-  const map = {
+function statusLine(syncStatus: SyncStatus | null): string {
+  const map: Record<string, string> = {
     synced: "Synced to cloud",
     syncing: "Syncing…",
     offline: "Offline — will sync",
     error: "Sync error",
     idle: "Signed in",
   };
-  return map[syncStatus?.state] ?? "Signed in";
+  return map[syncStatus?.state ?? "idle"] ?? "Signed in";
 }
 
-function statusDotCls(syncStatus) {
+function statusDotCls(syncStatus: SyncStatus | null): string {
   if (syncStatus?.state === "synced") return "bg-emerald-500";
   if (syncStatus?.state === "syncing") return "bg-amber-400 animate-pulse";
   if (syncStatus?.state === "offline") return "bg-slate-400";
@@ -138,11 +175,17 @@ function statusDotCls(syncStatus) {
 
 // --- P1: account & sync ---
 
-function AccountSection({ user, syncStatus }) {
+function AccountSection({
+  user,
+  syncStatus,
+}: {
+  user: User | null;
+  syncStatus: SyncStatus;
+}) {
   const [modal, setModal] = useState(false);
   const [name, setName] = useState("");
   const [share, setShare] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -185,11 +228,14 @@ function AccountSection({ user, syncStatus }) {
 
   const shareUrl = `${location.origin}${location.pathname}#/u/${user.uid}`;
 
-  const saveProfile = async (patch) => {
+  // Narrowed once here (const) so every closure below sees a non-null uid.
+  const uid = user.uid;
+
+  const saveProfile = async (patch: Record<string, unknown>): Promise<void> => {
     setBusy(true);
     setMessage(null);
     try {
-      await updateProfileDoc(user.uid, patch);
+      await updateProfileDoc(uid, patch);
       setMessage({ ok: true, text: "Saved." });
     } catch {
       setMessage({ ok: false, text: "Could not save — check your connection." });
@@ -203,17 +249,17 @@ function AccountSection({ user, syncStatus }) {
     if (!trimmed) return;
     await setDisplayName(trimmed).catch(() => {});
     await saveProfile({ displayName: trimmed });
-    // propagate the new name to connected leaderboards
-    refreshConnectionSummaries(user.uid).catch(() => {});
+    // Leaderboards read the profile doc live, so the new name shows up
+    // everywhere with no fan-out needed.
   };
 
-  const toggleShare = async (next) => {
+  const toggleShare = async (next: boolean): Promise<void> => {
     setShare(next);
-    if (next) await refreshProfileSummary(user.uid).catch(() => {});
+    if (next) await refreshProfileSummary(uid).catch(() => {});
     await saveProfile({ shareEnabled: next });
   };
 
-  const copyLink = async () => {
+  const copyLink = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setMessage({ ok: true, text: "Share link copied." });
@@ -326,19 +372,27 @@ function AccountSection({ user, syncStatus }) {
 // --- page ---
 
 export default function SettingsPage({
-  done,
+  solves,
   onReplace,
   onReset,
   theme,
   setTheme,
   user,
   syncStatus,
+}: {
+  solves: Record<string, string>;
+  onReplace: (map: Record<string, string>) => Promise<void>;
+  onReset: () => Promise<void>;
+  theme: string;
+  setTheme: (mode: "light" | "dark") => void;
+  user: User | null;
+  syncStatus: SyncStatus;
 }) {
-  const fileRef = useRef(null);
-  const [message, setMessage] = useState(null); // data section feedback
-  const [resetMsg, setResetMsg] = useState(null);
-  const [deleteMsg, setDeleteMsg] = useState(null);
-  const solved = Object.keys(done).length;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null); // data section feedback
+  const [resetMsg, setResetMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [deleteMsg, setDeleteMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const solved = Object.keys(solves).length;
 
   const exportFile = async () => {
     const payload = await exportProfile();
@@ -349,17 +403,18 @@ export default function SettingsPage({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `dsa-progress-${day}.json`;
+    a.download = `ascent-backup-${day}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const importFile = (file) => {
+  const importFile = (file: File): void => {
     const reader = new FileReader();
     reader.onload = async () => {
-      let parsed;
+      let parsed: ParsedBackup;
       try {
-        parsed = parseBackup(JSON.parse(reader.result));
+        const text = typeof reader.result === "string" ? reader.result : "";
+        parsed = parseBackup(JSON.parse(text));
       } catch {
         setMessage({
           ok: false,
@@ -373,7 +428,7 @@ export default function SettingsPage({
         )
       )
         return;
-      const merged = await applyBackup(parsed, done);
+      const merged = await applyBackup(parsed, solves);
       await onReplace(merged);
       window.location.reload();
     };
@@ -382,7 +437,7 @@ export default function SettingsPage({
     reader.readAsText(file);
   };
 
-  const themeBtn = (mode, icon, label) => (
+  const themeBtn = (mode: "light" | "dark", icon: ReactNode, label: string) => (
     <button
       onClick={() => setTheme(mode)}
       className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
@@ -512,11 +567,13 @@ export default function SettingsPage({
                   setDeleteMsg(null);
                   try {
                     await deleteAccountAndCloudData();
-                  } catch (err) {
+                  } catch (err: unknown) {
+                    const code =
+                      err instanceof Error ? (err as { code?: string }).code : undefined;
                     setDeleteMsg({
                       ok: false,
                       text:
-                        err?.code === "auth/requires-recent-login"
+                        code === "auth/requires-recent-login"
                           ? "Cloud data deleted. To remove the account too: sign out, sign in again, and retry."
                           : "Could not delete — try again.",
                     });

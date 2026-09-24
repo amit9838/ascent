@@ -1,9 +1,24 @@
 import { StatStrip } from "./StatStrip.jsx";
 import { Avatar } from "../../../components/primitives/index.js";
+import type { Profile } from "../../../lib/cloud/follow.ts";
+import type { ProfileSummary } from "../../../lib/cloud/profileSummary.ts";
+import type { ReactNode } from "react";
 
 // Premium header: solid card surface (white / slate-900), ringed avatar,
 // identity, CTA slot — with icon stat tiles at the bottom.
-export function ProfileHero({ profile, summary, subtitle, actions, badge }) {
+export function ProfileHero({
+  profile,
+  summary,
+  subtitle,
+  actions,
+  badge,
+}: {
+  profile: Profile;
+  summary?: ProfileSummary | null;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  badge?: ReactNode;
+}) {
   const s = summary;
   return (
     <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-xl dark:shadow-slate-900/10">

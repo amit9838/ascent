@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import type { User } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { cloudEnabled } from "../../lib/cloud/firebase.js";
 import { computeSummary } from "../../lib/cloud/profileSummary.js";
+import type { ProfileSummary } from "../../lib/cloud/profileSummary.js";
+import { subscribeProfile } from "../../lib/cloud/follow.js";
+import type { Profile } from "../../lib/cloud/follow.js";
 import {
   acceptInvite,
   clearFinishedSentInvites,
@@ -13,50 +18,72 @@ import {
   subscribeSent,
   withdrawInvite,
 } from "../../lib/cloud/connections.js";
+import type { DirectoryEntry, Invite } from "../../lib/cloud/connections.js";
 import { CheckIcon, FlameIcon, HashIcon, MoreIcon, TrophyIcon, UserIcon, ZapIcon } from "../../components/icons.jsx";
 import { Button, Avatar, IconButton, Popover } from "../../components/primitives/index.js";
-import { rankTier } from "../../lib/gamification/titles.js";
+import { rankTier } from "../../lib/gamification/titles.ts";
 
 const card =
   "rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-700 dark:bg-slate-900";
 const inputCls =
   "flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
 
-const statusChip = {
+const statusChip: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   accepted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
   rejected: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
 };
 
-function friendlyError(err, fallback) {
-  if (err?.code === "permission-denied")
-    return `Cloud rejected this — step: "${err?.message ?? "unknown"}". The published rules don't allow it yet. Open Firebase console → Firestore → Rules and confirm the published text contains "match /emails/" (and invites/sent/connections blocks), then Publish and retry.`;
-  if (err?.code === "unavailable")
+// Cloud docs are untrusted — coerce unknown fields to text at the boundary.
+const asText = (v: unknown): string | undefined =>
+  typeof v === "string" ? v : undefined;
+
+export interface BoardEntry {
+  uid: string;
+  displayName?: string;
+  photoURL?: string | null;
+  summary: ProfileSummary | null;
+  isMe: boolean;
+}
+
+function friendlyError(err: unknown, fallback: string): string {
+  const code =
+    typeof err === "object" && err !== null && "code" in err
+      ? String((err as { code?: unknown }).code ?? "")
+      : "";
+  const message = err instanceof Error ? err.message : "";
+  if (code === "permission-denied")
+    return `Cloud rejected this — step: "${message || "unknown"}". The published rules don't allow it yet. Open Firebase console → Firestore → Rules and confirm the published text contains "match /emails/" (and invites/sent/connections blocks), then Publish and retry.`;
+  if (code === "unavailable")
     return "Can't reach the cloud — check your connection and retry.";
-  return err?.message || fallback;
+  return message || fallback;
 }
 
 // Sort priority: points → solved → streak → rank title.
-function compareBoard(a, b) {
-  const num = (s, k) => s?.[k] ?? -1;
-  for (const k of ["points", "solved", "streak"]) {
+function compareBoard(a: BoardEntry, b: BoardEntry): number {
+  const num = (
+    s: ProfileSummary | null | undefined,
+    k: "points" | "solved" | "streak"
+  ): number => s?.[k] ?? -1;
+  const keys = ["points", "solved", "streak"] as const;
+  for (const k of keys) {
     const d = num(b.summary, k) - num(a.summary, k);
     if (d) return d;
   }
-  return rankTier(b.summary?.rank) - rankTier(a.summary?.rank);
+  return rankTier(b.summary?.rank ?? "") - rankTier(a.summary?.rank ?? "");
 }
 
 // Everything equal (points, solved, streak, rank) → full tie, same key.
-function statsKey(s) {
+function statsKey(s: ProfileSummary | null | undefined): string {
   return [
     s?.points ?? -1,
     s?.solved ?? -1,
     s?.streak ?? -1,
-    rankTier(s?.rank),
+    rankTier(s?.rank ?? ""),
   ].join("|");
 }
 
-const avatarRing = {
+const avatarRing: Record<number, string> = {
   1: "ring-2 ring-amber-400",
   2: "ring-2 ring-slate-300 dark:ring-slate-500",
   3: "ring-2 ring-orange-300 dark:ring-orange-500",
@@ -71,7 +98,7 @@ const boardCard =
 
 const headIcon = "h-3.5 w-3.5 shrink-0";
 
-function Rank({ pos }) {
+function Rank({ pos }: { pos: number }) {
   // Compact "#1" style — colored only for the podium spots.
   const tone =
     pos === 1
@@ -90,12 +117,24 @@ const menuDanger =
   "block w-full rounded-lg px-2.5 py-1.5 text-left text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/60";
 
 // Three-dot row menu: visit profile, copy link, remove from board.
-function RowMenu({ entry, isMe, busy, onVisit, onRemove }) {
+function RowMenu({
+  entry,
+  isMe,
+  busy,
+  onVisit,
+  onRemove,
+}: {
+  entry: BoardEntry;
+  isMe: boolean;
+  busy: boolean;
+  onVisit: () => void;
+  onRemove?: () => void;
+}) {
   const [open, setOpen] = useState(false);
 
-  const stop = (e) => e.stopPropagation();
+  const stop = (e: { stopPropagation: () => void }): void => e.stopPropagation();
 
-  const copyLink = async (e) => {
+  const copyLink = async (e: { stopPropagation: () => void }): Promise<void> => {
     stop(e);
     setOpen(false);
     const url = `${window.location.origin}${window.location.pathname}#/u/${entry.uid}`;
@@ -156,7 +195,19 @@ function RowMenu({ entry, isMe, busy, onVisit, onRemove }) {
   );
 }
 
-function BoardRow({ pos, members, busy, onRemoveMember, onOpen }) {
+function BoardRow({
+  pos,
+  members,
+  busy,
+  onRemoveMember,
+  onOpen,
+}: {
+  pos: number;
+  members: BoardEntry[];
+  busy: boolean;
+  onRemoveMember?: (m: BoardEntry) => (() => void) | undefined;
+  onOpen?: (entry: BoardEntry) => void;
+}) {
   const tied = members.length > 1;
   const primary = members[0];
   const s = primary.summary;
@@ -247,19 +298,21 @@ function BoardRow({ pos, members, busy, onRemoveMember, onOpen }) {
   );
 }
 
-export default function LeaderboardPage({ user }) {
+export default function LeaderboardPage({ user }: { user: User | null }) {
   const [ready, setReady] = useState(false);
-  const [me, setMe] = useState(null); // my summary (computed locally)
-  const [rows, setRows] = useState([]); // connections (live)
-  const [invites, setInvites] = useState([]); // received (live)
-  const [sent, setSent] = useState([]); // sent (live)
+  const [me, setMe] = useState<ProfileSummary | null>(null); // my summary (computed locally)
+  const [rows, setRows] = useState<DirectoryEntry[]>([]); // connections: identity only (live)
+  const [peerProfiles, setPeerProfiles] = useState<Record<string, Profile | null>>({}); // uid -> public profile (live)
+  const profileUnsubs = useRef<Record<string, () => void>>({});
+  const [invites, setInvites] = useState<Invite[]>([]); // received (live)
+  const [sent, setSent] = useState<Invite[]>([]); // sent (live)
   const [email, setEmail] = useState("");
-  const [inviteMsg, setInviteMsg] = useState(null); // { ok, text }
+  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null); // { ok, text }
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
   // Row click → public profile (only shows data if they share publicly).
-  const openProfile = (b) => {
+  const openProfile = (b: BoardEntry): void => {
     if (!b?.uid) return;
     navigate(`/u/${b.uid}`);
   };
@@ -274,10 +327,23 @@ export default function LeaderboardPage({ user }) {
   }, [computeMe]);
 
   // Connections, invites and sent-invites update live — no reload needed.
+  // Stats come from each peer's public profile (one live subscription per
+  // peer), never from stamped copies — boards refresh as anyone solves.
   useEffect(() => {
     if (!user) return;
     setReady(false);
-    const onErr = (err) => console.warn("[leaderboard] listener failed", err);
+    const onErr = (err: unknown): void =>
+      console.warn("[leaderboard] listener failed", err);
+    const toInvite = (r: DirectoryEntry): Invite => ({
+      uid: r.uid,
+      displayName: asText(r.displayName),
+      photoURL: asText(r.photoURL),
+      email: asText(r.email),
+      status: asText(r.status),
+      createdAt: asText(r.createdAt),
+    });
+    const newestFirst = (a: Invite, b: Invite): number =>
+      (a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1;
     const unsubs = [
       subscribeConnections(
         user.uid,
@@ -288,18 +354,47 @@ export default function LeaderboardPage({ user }) {
         onErr
       ),
       subscribeInvites(user.uid, (r) =>
-        setInvites(
-          [...r].sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1))
-        )
+        setInvites(r.map(toInvite).sort(newestFirst))
       , onErr),
       subscribeSent(user.uid, (r) =>
-        setSent(
-          [...r].sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1))
-        )
+        setSent(r.map(toInvite).sort(newestFirst))
       , onErr),
     ];
     return () => unsubs.forEach((u) => u());
   }, [user?.uid]);
+
+  useEffect(() => {
+    const wanted = new Set(rows.map((r) => r.uid));
+    for (const [uid, unsub] of Object.entries(profileUnsubs.current)) {
+      if (!wanted.has(uid)) {
+        unsub();
+        delete profileUnsubs.current[uid];
+        setPeerProfiles((prev) => {
+          if (!(uid in prev)) return prev;
+          const next = { ...prev };
+          delete next[uid];
+          return next;
+        });
+      }
+    }
+    for (const uid of wanted) {
+      if (profileUnsubs.current[uid]) continue;
+      profileUnsubs.current[uid] = subscribeProfile(
+        uid,
+        (profile) =>
+          setPeerProfiles((prev) => ({ ...prev, [uid]: profile })),
+        (err) => console.warn("[leaderboard] profile listener failed", err)
+      );
+    }
+  }, [rows]);
+
+  useEffect(
+    () => () => {
+      Object.values(profileUnsubs.current).forEach((unsub) => unsub());
+      profileUnsubs.current = {};
+    },
+    []
+  );
 
   if (!cloudEnabled()) {
     return (
@@ -332,20 +427,34 @@ export default function LeaderboardPage({ user }) {
     );
   }
 
-  const board = [
+  // Narrowed once here (const) so every closure below sees a non-null uid.
+  const uid = user.uid;
+
+  const board: BoardEntry[] = [
     {
-      uid: user.uid,
+      uid,
       displayName: user.displayName || user.email?.split("@")[0] || "You",
       photoURL: user.photoURL,
       summary: me,
       isMe: true,
     },
-    ...rows.map((r) => ({ ...r, isMe: false })),
+    ...rows.map((r): BoardEntry => {
+      const profile = peerProfiles[r.uid];
+      return {
+        uid: r.uid,
+        displayName: asText(profile?.displayName) ?? asText(r.displayName),
+        photoURL: asText(profile?.photoURL) ?? asText(r.photoURL),
+        summary: profile?.shareEnabled
+          ? ((profile.summary as ProfileSummary | null) ?? null)
+          : null,
+        isMe: false,
+      };
+    }),
   ].sort(compareBoard);
 
   // Full ties share one overlapped row ("A & B") with the same position.
   // Competition ranking: a 2-wide tie at #2 pushes the next group to #4.
-  const groups = [];
+  const groups: Array<{ key: string; members: BoardEntry[]; pos: number }> = [];
   let seen = 0;
   for (const b of board) {
     const key = statsKey(b.summary);
@@ -362,16 +471,16 @@ export default function LeaderboardPage({ user }) {
   const myGroup = groups.find((g) => g.members.some((m) => m.isMe));
   const myPos = myGroup?.pos ?? 0;
 
-  const invite = async (e) => {
+  const invite = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (busy || !email.trim()) return;
     setBusy(true);
     setInviteMsg(null);
     try {
-      await sendInvite(user.uid, email);
+      await sendInvite(uid, email);
       setInviteMsg({ ok: true, text: `Invite sent to ${email.trim()}.` });
       setEmail("");
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn("[leaderboard] invite failed", err);
       setInviteMsg({ ok: false, text: friendlyError(err, "Could not send invite.") });
     } finally {
@@ -379,12 +488,12 @@ export default function LeaderboardPage({ user }) {
     }
   };
 
-  const act = async (fn) => {
+  const act = async (fn: () => void | Promise<void>): Promise<void> => {
     setBusy(true);
     try {
       await fn();
       await computeMe();
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn("[leaderboard] action failed", err);
       setInviteMsg({ ok: false, text: friendlyError(err, "Action failed — retry.") });
     } finally {
@@ -392,11 +501,11 @@ export default function LeaderboardPage({ user }) {
     }
   };
 
-  const clearFinished = async () => {
+  const clearFinished = async (): Promise<void> => {
     setBusy(true);
     setInviteMsg(null);
     try {
-      const n = await clearFinishedSentInvites(user.uid);
+      const n = await clearFinishedSentInvites(uid);
       await computeMe();
       setInviteMsg({
         ok: true,
@@ -404,7 +513,7 @@ export default function LeaderboardPage({ user }) {
           ? `Cleared ${n} finished invite${n === 1 ? "" : "s"} — pending ones kept.`
           : "No finished invites to clear.",
       });
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn("[leaderboard] clear history failed", err);
       setInviteMsg({ ok: false, text: friendlyError(err, "Could not clear history.") });
     } finally {
@@ -504,7 +613,7 @@ export default function LeaderboardPage({ user }) {
                     onRemoveMember={(m) =>
                       m.isMe
                         ? undefined
-                        : () => act(() => removeConnection(user.uid, m.uid))
+                        : () => act(() => removeConnection(uid, m.uid))
                     }
                   />
                 ))}
@@ -543,14 +652,14 @@ export default function LeaderboardPage({ user }) {
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   <button
-                    onClick={() => act(() => acceptInvite(user.uid, inv))}
+                    onClick={() => act(() => acceptInvite(uid, inv))}
                     disabled={busy}
                     className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     <CheckIcon className="h-4 w-4" /> Accept
                   </button>
                   <button
-                    onClick={() => act(() => rejectInvite(user.uid, inv))}
+                    onClick={() => act(() => rejectInvite(uid, inv))}
                     disabled={busy}
                     className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
@@ -630,7 +739,7 @@ export default function LeaderboardPage({ user }) {
                     <span className="flex shrink-0 items-center gap-2">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                          statusChip[s.status] ?? statusChip.pending
+                          statusChip[s.status ?? "pending"] ?? statusChip.pending
                         }`}
                       >
                         {s.status ?? "pending"}
@@ -640,7 +749,7 @@ export default function LeaderboardPage({ user }) {
                           variant="danger"
                           size="xs"
                           disabled={busy}
-                          onClick={() => act(() => withdrawInvite(user.uid, s.uid))}
+                          onClick={() => act(() => withdrawInvite(uid, s.uid))}
                         >
                           Withdraw
                         </Button>

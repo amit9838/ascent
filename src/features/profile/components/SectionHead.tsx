@@ -1,4 +1,14 @@
-export function SectionHead({ title, sub, action }) {
+import type { ReactNode } from "react";
+
+export function SectionHead({
+  title,
+  sub,
+  action,
+}: {
+  title: ReactNode;
+  sub?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div>

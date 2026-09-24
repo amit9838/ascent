@@ -1,27 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { TOPICS } from "../../data/topics.js";
-import { loadTopicCsv, F } from "../../lib/csv.js";
-import { buildPointsMap } from "../../lib/gamification/points.js";
-import { useWeeklyTarget } from "../../lib/gamification/plans.js";
+import { loadProblemIndex } from "../../lib/data/problems.js";
+import type { Problem, ProblemIndex } from "../../lib/data/problemRows.ts";
+import { buildPointsMap } from "../../lib/gamification/points.ts";
+import { useWeeklyTarget } from "../../lib/entities/settings.ts";
 import {
   collectDaily,
   collectWeekly,
   dailyTarget,
   refreshRewards,
-} from "../../lib/gamification/rewards.js";
+} from "../../lib/gamification/rewards.ts";
+import type { RewardStatusView } from "../../lib/gamification/rewards.ts";
 import {
   CONSISTENCY_TITLES,
   STREAK_TITLES,
   currentRank,
   maxStreak,
   rankLadder,
-} from "../../lib/gamification/titles.js";
+} from "../../lib/gamification/titles.ts";
+import type { RankStep } from "../../lib/gamification/titles.ts";
 import { CheckIcon, FlameIcon, StarIcon, TrophyIcon } from "../../components/icons.jsx";
 import { ProgressBar } from "../../components/ui.jsx";
 import { CoinStack } from "../../components/CoinStack.jsx";
 import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
 
-function fmtFull(key /* YYYY-MM-DD, parsed without timezone shift */) {
+function fmtFull(key: string /* YYYY-MM-DD, parsed without timezone shift */): string {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, {
     weekday: "short",
@@ -30,9 +34,9 @@ function fmtFull(key /* YYYY-MM-DD, parsed without timezone shift */) {
   });
 }
 
-function fmtWeek(mondayKey) {
+function fmtWeek(mondayKey: string): string {
   const [y, m, d] = mondayKey.split("-").map(Number);
-  const f = (dt) =>
+  const f = (dt: Date): string =>
     dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   return `${f(new Date(y, m - 1, d))} – ${f(new Date(y, m - 1, d + 6))}`;
 }
@@ -40,7 +44,19 @@ function fmtWeek(mondayKey) {
 const stepper =
   "rounded-md border border-slate-300 px-2 py-0.5 text-sm hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800";
 
-function ShelfRow({ icon, color, name, req, earned }) {
+function ShelfRow({
+  icon,
+  color,
+  name,
+  req,
+  earned,
+}: {
+  icon: ReactNode;
+  color: string;
+  name: ReactNode;
+  req: ReactNode;
+  earned: boolean;
+}) {
   return (
     <li className="flex items-center justify-between gap-3 py-1.5">
       <span className="flex items-center gap-3">
@@ -65,14 +81,24 @@ function ShelfRow({ icon, color, name, req, earned }) {
   );
 }
 
-function rankReq(r, total) {
+function rankReq(r: RankStep, total: number): string {
   if (r.solves === 1) return "Solve your first problem";
   if (r.solves >= total) return `Solve all ${total}`;
   return `Solve ${r.solves}`;
 }
 
-function TrophyShelf({ done, solved, total, perfectWeeks }) {
-  const best = maxStreak(done);
+function TrophyShelf({
+  solves,
+  solved,
+  total,
+  perfectWeeks,
+}: {
+  solves: Record<string, string>;
+  solved: number;
+  total: number;
+  perfectWeeks: number;
+}) {
+  const best = maxStreak(solves);
   return (
     <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <h2 className="text-lg font-semibold">Treasure Hall</h2>
@@ -99,16 +125,16 @@ function TrophyShelf({ done, solved, total, perfectWeeks }) {
             Streak
           </h3>
           <ul className="mt-1 divide-y divide-slate-100 dark:divide-slate-800">
-            {STREAK_TITLES.map((t) => (
-              <ShelfRow
-                key={t.name}
-                icon={<FlameIcon className="h-5 w-5" />}
-                color="text-orange-500"
-                name={t.name}
-                req={`${t.days}-day streak`}
-                earned={best >= t.days}
-              />
-            ))}
+              {STREAK_TITLES.map((t) => (
+                <ShelfRow
+                  key={t.name}
+                  icon={<FlameIcon className="h-5 w-5" />}
+                  color="text-orange-500"
+                  name={t.name}
+                  req={`${t.days ?? 0}-day streak`}
+                  earned={(best ?? 0) >= (t.days ?? 0)}
+                />
+              ))}
           </ul>
         </div>
         <div>
@@ -116,16 +142,16 @@ function TrophyShelf({ done, solved, total, perfectWeeks }) {
             Consistency
           </h3>
           <ul className="mt-1 divide-y divide-slate-100 dark:divide-slate-800">
-            {CONSISTENCY_TITLES.map((t) => (
-              <ShelfRow
-                key={t.name}
-                icon={<StarIcon className="h-5 w-5" />}
-                color="text-violet-500"
-                name={t.name}
-                req={`${t.weeks} perfect ${t.weeks === 1 ? "week" : "weeks"}`}
-                earned={perfectWeeks >= t.weeks}
-              />
-            ))}
+              {CONSISTENCY_TITLES.map((t) => (
+                <ShelfRow
+                  key={t.name}
+                  icon={<StarIcon className="h-5 w-5" />}
+                  color="text-violet-500"
+                  name={t.name}
+                  req={`${t.weeks ?? 0} perfect ${t.weeks === 1 ? "week" : "weeks"}`}
+                  earned={perfectWeeks >= (t.weeks ?? 0)}
+                />
+              ))}
           </ul>
         </div>
       </div>
@@ -133,54 +159,52 @@ function TrophyShelf({ done, solved, total, perfectWeeks }) {
   );
 }
 
-export default function ProgressPage({ done }) {
-  const [data, setData] = useState(null); // { slug: rows[] }
-  const pointsMap = useMemo(() => buildPointsMap(data), [data]);
-  const [rewards, setRewards] = useState({ daily: {}, weekly: {} });
+export default function ProgressPage({ solves }: { solves: Record<string, string> }) {
+  const [index, setIndex] = useState<ProblemIndex | null>(null);
+  const pointsMap = useMemo(() => buildPointsMap(index ?? {}), [index]);
+  const [rewards, setRewards] = useState<RewardStatusView>({ daily: {}, weekly: {} });
   const [target, setTarget] = useWeeklyTarget();
 
   useEffect(() => {
     let cancelled = false;
-    refreshRewards(done, pointsMap, target).then((s) => {
+    refreshRewards(solves, pointsMap, target).then((s) => {
       if (!cancelled) setRewards(s);
     });
     return () => {
       cancelled = true;
     };
-  }, [data, done, pointsMap, target]);
-  const changeTarget = async (d) => {
+  }, [index, solves, pointsMap, target]);
+  const changeTarget = async (d: number): Promise<void> => {
     const next = Math.min(100, Math.max(1, target + d));
     await setTarget(next);
   };
-  const claimDaily = async (day) => {
+  const claimDaily = async (day: string): Promise<void> => {
     setRewards(await collectDaily(day));
   };
-  const claimWeekly = async (wk) => {
+  const claimWeekly = async (wk: string): Promise<void> => {
     setRewards(await collectWeekly(wk));
   };
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all(
-      TOPICS.map((t) => loadTopicCsv(t.csv).then((rows) => [t.slug, rows]))
-    )
-      .then((entries) => {
-        if (!cancelled) setData(Object.fromEntries(entries));
+    loadProblemIndex()
+      .then((loaded) => {
+        if (!cancelled) setIndex(loaded);
       })
       .catch(() => {
-        if (!cancelled) setData({});
+        if (!cancelled) setIndex(null);
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const solvedIn = (rows) => rows.filter((r) => done[r[F.link]]).length;
-  const total = data
-    ? Object.values(data).reduce((a, rows) => a + rows.length, 0)
-    : 0;
-  const solved = data
-    ? TOPICS.reduce((a, t) => a + solvedIn(data[t.slug] ?? []), 0)
+  const problemsOf = (slug: string): Problem[] => index?.byTopic.get(slug) ?? [];
+  const solvedIn = (problems: Problem[]): number =>
+    problems.filter((p) => solves[p.id]).length;
+  const total = index?.total ?? 0;
+  const solved = index
+    ? TOPICS.reduce((count, t) => count + solvedIn(problemsOf(t.slug)), 0)
     : 0;
 
   const daily = Object.entries(rewards.daily).sort((a, b) =>
@@ -191,22 +215,19 @@ export default function ProgressPage({ done }) {
   );
   const stars = daily.filter(([, s]) => s === "collected").length;
   const trophies = weekly.filter(([, s]) => s === "collected").length;
-  const rank = data ? currentRank(solved, total) : { current: null, next: null };
-  const mix = { easy: 0, medium: 0, hard: 0 };
-  if (data) {
-    for (const rows of Object.values(data)) {
-      for (const r of rows) {
-        if (done[r[F.link]]) {
-          const d = (r[F.difficulty] || "").toLowerCase();
-          if (d === "easy" || d === "medium" || d === "hard") mix[d]++;
-        }
+  const rank = index ? currentRank(solved, total) : { current: null, next: null };
+  const mix: Record<string, number> = { easy: 0, medium: 0, hard: 0 };
+  if (index) {
+    for (const problem of index.byId.values()) {
+      if (solves[problem.id]) {
+        if (problem.difficulty in mix) mix[problem.difficulty]++;
       }
     }
   }
   const mastery = TOPICS.map((t) => {
-    const rows = data?.[t.slug] ?? [];
-    const s = rows.filter((r) => done[r[F.link]]).length;
-    return { topic: t, solved: s, total: rows.length };
+    const problems = problemsOf(t.slug);
+    const s = problems.filter((p) => solves[p.id]).length;
+    return { topic: t, solved: s, total: problems.length };
   }).sort(
     (a, b) =>
       b.solved / Math.max(1, b.total) - a.solved / Math.max(1, a.total)
@@ -289,9 +310,9 @@ export default function ProgressPage({ done }) {
         </section>
       
 
-      {data ? (
+      {index ? (
         <TrophyShelf
-          done={done}
+          solves={solves}
           solved={solved}
           total={total}
           perfectWeeks={Object.keys(rewards.weekly).length}
@@ -329,7 +350,7 @@ export default function ProgressPage({ done }) {
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Solved per topic, best first.
         </p>
-        {!data ? (
+        {!index ? (
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
             Loading topics…
           </p>

@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getTopic, workatTopicUrl } from "../../data/topics.js";
-import { loadTopicCsv, F } from "../../lib/csv.js";
+import { loadProblemIndex } from "../../lib/data/problems.js";
+import type { Problem } from "../../lib/data/problemRows.ts";
 import { DifficultyBadge, ExternalLink, ProgressBar } from "../../components/ui.jsx";
 import { BackIcon, ExternalIcon, SearchIcon } from "../../components/icons.jsx";
 
-export default function TopicPage({ done, onToggle }) {
+export default function TopicPage({
+  solves,
+  onToggle,
+}: {
+  solves: Record<string, string>;
+  onToggle: (id: string) => void;
+}) {
   const { slug } = useParams();
-  const topic = getTopic(slug);
+  const topic = getTopic(slug ?? "");
 
-  const [rows, setRows] = useState(null);
-  const [error, setError] = useState(null);
+  const [problems, setProblems] = useState<Problem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("all");
   const [hideDone, setHideDone] = useState(false);
@@ -18,14 +25,14 @@ export default function TopicPage({ done, onToggle }) {
   useEffect(() => {
     if (!topic) return;
     let cancelled = false;
-    setRows(null);
+    setProblems(null);
     setError(null);
-    loadTopicCsv(topic.csv)
-      .then((r) => {
-        if (!cancelled) setRows(r);
+    loadProblemIndex()
+      .then((index) => {
+        if (!cancelled) setProblems(index.byTopic.get(slug ?? "") ?? []);
       })
-      .catch((e) => {
-        if (!cancelled) setError(e.message);
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       });
     return () => {
       cancelled = true;
@@ -33,19 +40,19 @@ export default function TopicPage({ done, onToggle }) {
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
-    if (!rows) return [];
+    if (!problems) return [];
     const q = query.trim().toLowerCase();
-    return rows.filter((r) => {
-      if (difficulty !== "all" && (r[F.difficulty] || "").toLowerCase() !== difficulty)
+    return problems.filter((problem) => {
+      if (difficulty !== "all" && problem.difficulty !== difficulty)
         return false;
-      if (hideDone && done[r[F.link]]) return false;
+      if (hideDone && solves[problem.id]) return false;
       if (!q) return true;
-      return [r[F.name], r[F.companies], r[F.lc], r[F.notes]]
+      return [problem.name, problem.companies, problem.lcName, problem.note]
         .join(" ")
         .toLowerCase()
         .includes(q);
     });
-  }, [rows, query, difficulty, hideDone, done]);
+  }, [problems, query, difficulty, hideDone, solves]);
 
   if (!topic) {
     return (
@@ -58,7 +65,7 @@ export default function TopicPage({ done, onToggle }) {
     );
   }
 
-  const solved = rows ? rows.filter((r) => done[r[F.link]]).length : 0;
+  const solved = problems ? problems.filter((p) => solves[p.id]).length : 0;
 
   return (
     <div>
@@ -78,12 +85,12 @@ export default function TopicPage({ done, onToggle }) {
           </a>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {rows ? `${solved}/${rows.length} solved` : "Loading…"}
+          {problems ? `${solved}/${problems.length} solved` : "Loading…"}
         </p>
       </div>
-      {rows && (
+      {problems && (
         <div className="mt-3">
-          <ProgressBar done={solved} total={rows.length} />
+          <ProgressBar done={solved} total={problems.length} />
         </div>
       )}
 
@@ -125,13 +132,13 @@ export default function TopicPage({ done, onToggle }) {
         </div>
       )}
 
-      {rows && filtered.length === 0 && (
+      {problems && filtered.length === 0 && (
         <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
           No questions match the current filters.
         </p>
       )}
 
-      {rows && filtered.length > 0 && (
+      {problems && filtered.length > 0 && (
         <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
             <thead>
@@ -149,12 +156,11 @@ export default function TopicPage({ done, onToggle }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
-                const id = r[F.link];
-                const checked = Boolean(done[id]);
+              {filtered.map((problem) => {
+                const checked = Boolean(solves[problem.id]);
                 return (
                   <tr
-                    key={id || r[F.num]}
+                    key={problem.id}
                     className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60 ${
                       checked ? "bg-emerald-50/60 dark:bg-emerald-950/40" : ""
                     }`}
@@ -163,31 +169,31 @@ export default function TopicPage({ done, onToggle }) {
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={() => onToggle(id)}
+                        onChange={() => onToggle(problem.id)}
                         title={checked ? "Mark as not done" : "Mark as done"}
                         className="h-4 w-4 cursor-pointer accent-emerald-600"
                       />
                     </td>
-                    <td className="px-3 py-2 text-slate-500">{r[F.num]}</td>
+                    <td className="px-3 py-2 text-slate-500">{problem.seq}</td>
                     <td className="px-3 py-2 font-medium">
-                      <ExternalLink href={r[F.link]}>{r[F.name]}</ExternalLink>
+                      <ExternalLink href={problem.url}>{problem.name}</ExternalLink>
                     </td>
-                    <td className="px-3 py-2">{r[F.score]}</td>
-                    <td className="px-3 py-2">{r[F.accuracy]}</td>
+                    <td className="px-3 py-2">{problem.score}</td>
+                    <td className="px-3 py-2">{problem.accuracy}</td>
                     <td className="px-3 py-2">
-                      <DifficultyBadge level={r[F.difficulty]} />
+                      <DifficultyBadge level={problem.difficulty} />
                     </td>
                     <td className="max-w-[220px] px-3 py-2 text-slate-600 dark:text-slate-300">
-                      {r[F.companies] || "–"}
+                      {problem.companies || "–"}
                     </td>
                     <td className="max-w-[220px] px-3 py-2">
-                      <ExternalLink href={r[F.lcLink]}>{r[F.lc]}</ExternalLink>
+                      <ExternalLink href={problem.lcUrl}>{problem.lcName}</ExternalLink>
                     </td>
                     <td className="max-w-[220px] px-3 py-2">
-                      <ExternalLink href={r[F.otherLink]}>{r[F.other]}</ExternalLink>
+                      <ExternalLink href={problem.otherUrl}>{problem.otherName}</ExternalLink>
                     </td>
                     <td className="max-w-[280px] px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
-                      {r[F.notes]}
+                      {problem.note}
                     </td>
                   </tr>
                 );

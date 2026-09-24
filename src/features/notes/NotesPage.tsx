@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import type { User } from "firebase/auth";
 import { Link } from "react-router-dom";
 import { BackIcon, DownloadIcon, NotesIcon, TrashIcon } from "../../components/icons.jsx";
 import { Avatar, Button, IconButton, Modal } from "../../components/primitives/index.js";
-import { KEYS, subscribe } from "../../lib/db.js";
+import { subscribeRecords } from "../../lib/store/records.ts";
 import { useAuth } from "../../lib/auth.js";
 import { cloudEnabled } from "../../lib/cloud/firebase.js";
 import { getProfile } from "../../lib/cloud/follow.js";
@@ -16,6 +17,7 @@ import {
   subscribeSharedInbox,
   unshareMember,
 } from "../../lib/cloud/sharedNotes.js";
+import type { SharedMemberInfo } from "../../lib/cloud/sharedNotes.ts";
 import {
   MAX_NOTES,
   TITLE_LIMIT,
@@ -26,54 +28,68 @@ import {
   readNote,
   writeNote,
   deleteNote,
-} from "../../lib/notes.js";
+} from "../../lib/entities/notes.ts";
+import type { NoteMeta } from "../../lib/entities/notes.ts";
+import type { NoteRecord } from "../../lib/store/types.ts";
 
-function todayKey() {
+function todayKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function snippet(note) {
-  const line = note.body.split("\n").find((l) => l.trim());
+function snippet(note: NoteRecord): string {
+  const line = (note.body ?? "").split("\n").find((l) => l.trim());
   return (line ?? "Empty note").slice(0, 100);
+}
+
+// writeNote takes NoteLike (indexed), which the bare NoteRecord interface
+// doesn't satisfy — this threads the index signature through in one place.
+type WritableNote = NoteRecord & Record<string, unknown>;
+const writable = (note: NoteRecord): WritableNote => note as WritableNote;
+
+interface ShareInfo {
+  members: string[];
+  memberInfo: Record<string, SharedMemberInfo>;
+  ownerUid: string;
+  ownerName: string;
 }
 
 export default function NotesPage() {
   // meta: light index entries (always loaded). active: full note in the
   // editor (latest note at start). listNotes: all bodies — fetched only
   // when the notes modal opens (lazy load).
-  const [meta, setMeta] = useState(null); // null = loading
-  const [active, setActive] = useState(undefined); // undefined = loading, null = none
-  const [listNotes, setListNotes] = useState(null); // null = not loaded yet
+  const [meta, setMeta] = useState<NoteMeta[] | null>(null); // null = loading
+  const [active, setActive] = useState<NoteRecord | null | undefined>(undefined); // undefined = loading, null = none
+  const [listNotes, setListNotes] = useState<NoteRecord[] | null>(null); // null = not loaded yet
   const [listOpen, setListOpen] = useState(false); // modal closed by default
-  const [savedAt, setSavedAt] = useState(null);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [ready, setReady] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareInfo, setShareInfo] = useState(null); // {members, memberInfo, ownerUid, ownerName}
+  const [shareInfo, setShareInfo] = useState<ShareInfo | null>(null); // {members, memberInfo, ownerUid, ownerName}
   const [shareBusy, setShareBusy] = useState(false);
   const [shareError, setShareError] = useState("");
   const [shareEmail, setShareEmail] = useState("");
   const { user } = useAuth();
-  const userRef = useRef(null);
+  const userRef = useRef<User | null>(null);
   userRef.current = user;
   const canCloud = cloudEnabled();
 
   const dirtyUntil = useRef(0);
-  const pendingRef = useRef(new Map()); // id → note awaiting debounced write
-  const timerRef = useRef(null);
-  const titleRef = useRef(null);
-  const flushRef = useRef(null);
-  const activeRef = useRef(null); // always-fresh active for subscriptions
+  const pendingRef = useRef(new Map<string, WritableNote>()); // id → note awaiting debounced write
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const flushRef = useRef<(() => void) | null>(null);
+  const activeRef = useRef<NoteRecord | null | undefined>(null); // always-fresh active for subscriptions
   activeRef.current = active;
 
   // Push saved shared notes to their cloud doc (save-based, not realtime).
-  const pushShared = (batch) => {
+  const pushShared = (batch: WritableNote[]): void => {
     const u = userRef.current;
     if (!u || !cloudEnabled()) return;
     const shared = batch.filter((n) => n?.shared);
     if (!shared.length) return;
-    Promise.all(shared.map((n) => pushSharedNote(n, u))).catch((err) =>
+    Promise.all(shared.map((n) => pushSharedNote(n, u))).catch((err: unknown) =>
       console.warn("[notes] shared push failed", err)
     );
   };
@@ -94,8 +110,8 @@ export default function NotesPage() {
   };
   flushRef.current = flush;
 
-  const scheduleSave = (note) => {
-    pendingRef.current.set(note.id, note);
+  const scheduleSave = (note: NoteRecord): void => {
+    pendingRef.current.set(note.id, writable(note));
     if (timerRef.current) return;
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
@@ -110,7 +126,7 @@ export default function NotesPage() {
   };
 
   // Pull the latest cloud copy of a shared note (on open — not realtime).
-  const pullShared = async (note) => {
+  const pullShared = async (note: NoteRecord): Promise<NoteRecord> => {
     const u = userRef.current;
     if (!u || !cloudEnabled() || !note?.shared) return note;
     const remote = await fetchSharedNote(note.sharedId || note.id).catch(() => null);
@@ -157,8 +173,8 @@ export default function NotesPage() {
 
   // Remote updates: apply only when no unsaved local edits.
   useEffect(() => {
-    const unsub = subscribe((key, source) => {
-      if (key !== KEYS.notes || source !== "remote") return;
+    const unsub = subscribeRecords((storeName, source) => {
+      if (storeName !== "notes" || source !== "remote") return;
       if (Date.now() < dirtyUntil.current) return;
       (async () => {
         const m = await listNoteMeta();
@@ -174,13 +190,13 @@ export default function NotesPage() {
         }
         if (listNotesRef.current) {
           const ns = await Promise.all(m.map((e) => readNote(e.id)));
-          setListNotes(ns.filter(Boolean));
+          setListNotes(ns.filter((n): n is NoteRecord => Boolean(n)));
         }
-      })().catch((err) => console.warn("[notes] remote refresh failed", err));
+      })().catch((err: unknown) => console.warn("[notes] remote refresh failed", err));
     });
     return unsub;
   }, []);
-  const listNotesRef = useRef(null);
+  const listNotesRef = useRef<NoteRecord[] | null>(null);
   listNotesRef.current = listNotes;
 
   // Shared-notes inbox: pull notes others shared with me into local
@@ -268,7 +284,7 @@ export default function NotesPage() {
     dirtyUntil.current = Date.now() + 2500;
   };
 
-  const patchActive = (patch) => {
+  const patchActive = (patch: Partial<Pick<NoteRecord, "title" | "body">>): void => {
     if (!active) return;
     touch();
     const updated = { ...active, ...patch, updatedAt: new Date().toISOString() };
@@ -286,9 +302,9 @@ export default function NotesPage() {
     scheduleSave(updated);
   };
 
-  const takenTitles = new Set((meta ?? []).map((e) => e.title));
+  const takenTitles = new Set((meta ?? []).map((e) => e.title ?? ""));
 
-  const refreshShareInfo = async (target) => {
+  const refreshShareInfo = async (target?: NoteRecord | null): Promise<void> => {
     const t = target ?? activeRef.current;
     if (!t?.shared) {
       setShareInfo(null);
@@ -305,7 +321,10 @@ export default function NotesPage() {
     }
   };
 
-  const markSharedLocal = async (note, extra) => {
+  const markSharedLocal = async (
+    note: NoteRecord,
+    extra: { ownerUid: string; ownerName: string }
+  ): Promise<NoteRecord> => {
     const updated = { ...note, shared: true, sharedId: note.sharedId || note.id, ...extra };
     await writeNote(updated);
     setActive((cur) => (cur?.id === updated.id ? updated : cur));
@@ -334,13 +353,13 @@ export default function NotesPage() {
       await pushSharedNote(updated, user).catch(() => {});
       await refreshShareInfo(updated);
     } catch (err) {
-      setShareError(err?.message || "Could not share this note.");
+      setShareError(err instanceof Error ? err.message : "Could not share this note.");
     } finally {
       setShareBusy(false);
     }
   };
 
-  const doUnshare = async (targetUid) => {
+  const doUnshare = async (targetUid: string): Promise<void> => {
     if (!user || !active) return;
     setShareBusy(true);
     setShareError("");
@@ -356,7 +375,7 @@ export default function NotesPage() {
         await refreshShareInfo(active);
       }
     } catch (err) {
-      setShareError(err?.message || "Could not update sharing.");
+      setShareError(err instanceof Error ? err.message : "Could not update sharing.");
     } finally {
       setShareBusy(false);
     }
@@ -376,7 +395,7 @@ export default function NotesPage() {
       setShareInfo(null);
       setShareOpen(false);
     } catch (err) {
-      setShareError(err?.message || "Could not stop sharing.");
+      setShareError(err instanceof Error ? err.message : "Could not stop sharing.");
     } finally {
       setShareBusy(false);
     }
@@ -398,7 +417,7 @@ export default function NotesPage() {
       setShareInfo(null);
       setShareOpen(false);
     } catch (err) {
-      setShareError(err?.message || "Could not leave this note.");
+      setShareError(err instanceof Error ? err.message : "Could not leave this note.");
     } finally {
       setShareBusy(false);
     }
@@ -408,7 +427,18 @@ export default function NotesPage() {
     if (!meta || meta.length >= MAX_NOTES) return;
     touch();
     const n = makeNote({ title: uniqueTitle(todayKey(), takenTitles) });
-    setMeta((ms) => [{ id: n.id, title: n.title, createdAt: n.createdAt, updatedAt: n.updatedAt }, ...(ms ?? [])]);
+    setMeta((ms) => [
+      {
+        id: n.id,
+        title: n.title,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+        shared: n.shared === true,
+        ownerUid: n.ownerUid ?? "",
+        ownerName: n.ownerName ?? "",
+      },
+      ...(ms ?? []),
+    ]);
     setListNotes((lb) => (lb ? [n, ...lb] : lb));
     setActive(n);
     scheduleSave(n);
@@ -416,7 +446,7 @@ export default function NotesPage() {
     setEditingTitle(true); // jump straight into titling it
   };
 
-  const removeNote = async (id) => {
+  const removeNote = async (id: string): Promise<void> => {
     const target =
       listNotes?.find((n) => n.id === id) ?? (active?.id === id ? active : null);
     const u = userRef.current;
@@ -448,7 +478,7 @@ export default function NotesPage() {
     }
   };
 
-  const selectNote = (note) => {
+  const selectNote = (note: NoteRecord): void => {
     flush(); // don't lose the previous note's tail edits
     setActive(note);
     setEditingTitle(false);
@@ -476,13 +506,13 @@ export default function NotesPage() {
         meta.map((e) =>
           active && e.id === active.id ? Promise.resolve(active) : readNote(e.id)
         )
-      ).then((ns) => setListNotes(ns.filter(Boolean)));
+      ).then((ns) => setListNotes(ns.filter((n): n is NoteRecord => Boolean(n))));
     }
   };
 
   const download = () => {
     if (!active) return;
-    const blob = new Blob([active.body], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([active.body ?? ""], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -501,18 +531,18 @@ export default function NotesPage() {
   }
 
   const atLimit = meta.filter((e) => !e.shared).length >= MAX_NOTES;
-  const lines = active ? active.body.split("\n").length : 0;
-  const nearLimit = active && active.body.length >= BODY_LIMIT * 0.95;
+  const lines = active ? (active.body ?? "").split("\n").length : 0;
+  const nearLimit = active ? (active.body ?? "").length >= BODY_LIMIT * 0.95 : false;
   const isOwner = !active?.ownerUid || active.ownerUid === user?.uid;
 
   const options = (
-    <div className="order-1 flex flex-wrap items-center gap-2 md:order-2 md:ml-auto">
+    <div className="order-1 flex flex-wrap items-center gap-2 my-1 md:order-2 md:ml-auto">
       {active && user && canCloud &&
         (active.shared ? (
           <AvatarStackButton
             members={shareInfo?.members ?? []}
             memberInfo={shareInfo?.memberInfo ?? {}}
-            ownerUid={shareInfo?.ownerUid ?? active.ownerUid}
+            ownerUid={shareInfo?.ownerUid ?? active.ownerUid ?? ""}
             onClick={openShare}
           />
         ) : (
@@ -624,7 +654,7 @@ export default function NotesPage() {
                 <input
                   ref={titleRef}
                   type="text"
-                  value={active.title}
+                  value={active.title ?? ""}
                   maxLength={TITLE_LIMIT}
                   autoFocus
                   onChange={(e) => patchActive({ title: e.target.value })}
@@ -667,7 +697,7 @@ export default function NotesPage() {
         {active ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <textarea
-              value={active.body}
+              value={active.body ?? ""}
               maxLength={BODY_LIMIT}
               onChange={(e) => patchActive({ body: e.target.value })}
               placeholder="Write anything — approaches, tricks, problems to revisit…"
@@ -677,7 +707,7 @@ export default function NotesPage() {
             <p className="mt-2 shrink-0 text-xs text-slate-500 dark:text-slate-400">
               {lines} lines &middot;{" "}
               <span className={nearLimit ? "text-amber-600 dark:text-amber-400" : undefined}>
-                {active.body.length.toLocaleString()} / {BODY_LIMIT.toLocaleString()}
+                {(active.body ?? "").length.toLocaleString()} / {BODY_LIMIT.toLocaleString()}
               </span>{" "}
               characters
               {savedAt ? ` · saved ${savedAt.toLocaleTimeString()}` : ""}
@@ -723,10 +753,20 @@ export default function NotesPage() {
 
 // Overlapped collaborator avatars — the share trigger on open shared
 // notes. Clicking opens share management.
-function AvatarStackButton({ members, memberInfo, ownerUid, onClick }) {
+function AvatarStackButton({
+  members,
+  memberInfo,
+  ownerUid,
+  onClick,
+}: {
+  members: string[];
+  memberInfo: Record<string, SharedMemberInfo>;
+  ownerUid: string;
+  onClick: () => void;
+}) {
   const shown = members.slice(0, 4);
   const extra = members.length - shown.length;
-  const infoOf = (uid) =>
+  const infoOf = (uid: string): SharedMemberInfo =>
     memberInfo?.[uid] ?? { displayName: "?", photoURL: "" };
   return (
     <button
@@ -775,11 +815,27 @@ function ShareModal({
   onUnshare,
   onStop,
   onLeave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  note: NoteRecord | null;
+  user: User | null;
+  shareInfo: ShareInfo | null;
+  busy: boolean;
+  error: string;
+  email: string;
+  setEmail: (value: string) => void;
+  onShare: () => void;
+  onUnshare: (uid: string) => void;
+  onStop: () => void;
+  onLeave: () => void;
 }) {
-  const members = shareInfo?.members ?? (note?.shared ? [note.ownerUid || user?.uid].filter(Boolean) : []);
+  const members: string[] =
+    shareInfo?.members ??
+    (note?.shared ? [note.ownerUid || user?.uid].filter((u): u is string => Boolean(u)) : []);
   // Names for members whose info hasn't been stamped yet (they haven't
   // saved) resolve via their public profile.
-  const [resolvedNames, setResolvedNames] = useState({});
+  const [resolvedNames, setResolvedNames] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -793,7 +849,7 @@ function ShareModal({
     Promise.all(missing.map((uid) => getProfile(uid).catch(() => null))).then(
       (profiles) => {
         if (cancelled) return;
-        const next = {};
+        const next: Record<string, string> = {};
         profiles.forEach((p, i) => {
           if (p?.displayName) next[missing[i]] = p.displayName;
         });
@@ -809,7 +865,7 @@ function ShareModal({
   }, [open, members.join("|")]);
   if (!note) return null;
   const isOwner = !note.ownerUid || note.ownerUid === user?.uid;
-  const infoOf = (uid) =>
+  const infoOf = (uid: string): { displayName?: string; photoURL?: string } =>
     shareInfo?.memberInfo?.[uid] ??
     (resolvedNames[uid] ? { displayName: resolvedNames[uid], photoURL: "" } : null) ??
     (uid === user?.uid
@@ -818,7 +874,7 @@ function ShareModal({
           photoURL: user.photoURL || "",
         }
       : { displayName: "", photoURL: "" });
-  const ownerUid = shareInfo?.ownerUid ?? note.ownerUid ?? user?.uid;
+  const ownerUid: string = shareInfo?.ownerUid ?? note.ownerUid ?? user?.uid ?? "";
 
   return (
     <Modal

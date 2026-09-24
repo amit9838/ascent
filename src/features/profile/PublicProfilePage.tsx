@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { cloudEnabled } from "../../lib/cloud/firebase.js";
 import { getProfile } from "../../lib/cloud/follow.js";
+import type { Profile } from "../../lib/cloud/follow.js";
+import type { ProfileSummary } from "../../lib/cloud/profileSummary.js";
 import {
   getSentStatus,
   isConnected,
@@ -20,13 +22,15 @@ import {
 import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
 import { BackIcon, CheckIcon, UserIcon } from "../../components/icons.jsx";
 
+type Relation = "loading" | "self" | "signedout" | "connected" | "pending" | "none";
+
 export default function PublicProfilePage() {
   const { uid } = useParams();
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null); // null=loading, false=unavailable
-  const [relation, setRelation] = useState("loading"); // self|signedout|connected|pending|none
+  const [profile, setProfile] = useState<Profile | false | null>(null); // null=loading, false=unavailable
+  const [relation, setRelation] = useState<Relation>("loading"); // self|signedout|connected|pending|none
   const [busy, setBusy] = useState(false);
-  const [inviteMsg, setInviteMsg] = useState(null);
+  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
   const [modal, setModal] = useState(false);
 
   useEffect(() => {
@@ -115,16 +119,27 @@ export default function PublicProfilePage() {
     );
   }
 
-  const s = profile.summary ?? {};
+  const rawSummary = (profile.summary ?? {}) as Partial<ProfileSummary>;
+  const s: ProfileSummary = {
+    solved: rawSummary.solved ?? 0,
+    total: rawSummary.total ?? 0,
+    points: rawSummary.points ?? 0,
+    streak: rawSummary.streak ?? 0,
+    rank: rawSummary.rank ?? "Unranked",
+    stars: rawSummary.stars ?? 0,
+    crowns: rawSummary.crowns ?? 0,
+    updatedAt: rawSummary.updatedAt ?? "",
+  };
 
-  const invite = async () => {
+  const invite = async (): Promise<void> => {
+    if (!user || !uid) return;
     setBusy(true);
     setInviteMsg(null);
     try {
       await sendInviteToUid(user.uid, uid);
       setRelation("pending");
-    } catch (err) {
-      setInviteMsg(err?.message || "Could not send invite.");
+    } catch (err: unknown) {
+      setInviteMsg(err instanceof Error ? err.message : "Could not send invite.");
     } finally {
       setBusy(false);
     }
@@ -192,14 +207,14 @@ export default function PublicProfilePage() {
         actions={actions}
       />
 
-      {(s.stars ?? 0) > 0 || (s.crowns ?? 0) > 0 ? (
+      {(s.stars > 0 || s.crowns > 0) ? (
         <section className={`${CARD} p-5 sm:p-6`}>
           <SectionHead
             title="Trophy case"
             sub="Coins earned by hitting daily targets and perfect weeks."
           />
           <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:divide-x sm:divide-slate-200 sm:gap-8 dark:divide-slate-700">
-            {(s.stars ?? 0) > 0 && (
+            {s.stars > 0 && (
               <CoinCard
                 coin={GoldCoin}
                 count={s.stars}
@@ -207,7 +222,7 @@ export default function PublicProfilePage() {
                 req="earned by hitting the daily target"
               />
             )}
-            {(s.crowns ?? 0) > 0 && (
+            {s.crowns > 0 && (
               <CoinCard
                 accent="violet"
                 coin={SapphireCoin}
@@ -220,8 +235,8 @@ export default function PublicProfilePage() {
         </section>
       ) : null}
 
-      {(s.solved ?? 0) > 0 ? (
-        <RankPath solved={s.solved} total={s.total ?? 0} />
+      {s.solved > 0 ? (
+        <RankPath solved={s.solved} total={s.total} />
       ) : null}
 
       <p className="pb-2 text-center text-xs text-slate-400 dark:text-slate-500">

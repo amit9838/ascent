@@ -1,34 +1,35 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { TOPICS, workatTopicUrl } from "../../data/topics.js";
-import { loadTopicCsv, F } from "../../lib/csv.js";
+import { loadProblemIndex } from "../../lib/data/problems.js";
+import type { Problem, ProblemIndex } from "../../lib/data/problemRows.ts";
 import { ProgressBar } from "../../components/ui.jsx";
 import { ArrowRightIcon, ExternalIcon } from "../../components/icons.jsx";
 
-export default function TopicsPage({ done }) {
-  const [data, setData] = useState(null); // { slug: rows[] }
-  const [error, setError] = useState(null);
+export default function TopicsPage({ solves }: { solves: Record<string, string> }) {
+  const [index, setIndex] = useState<ProblemIndex | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all(
-      TOPICS.map((t) => loadTopicCsv(t.csv).then((rows) => [t.slug, rows]))
-    )
-      .then((entries) => {
-        if (!cancelled) setData(Object.fromEntries(entries));
+    loadProblemIndex()
+      .then((loaded) => {
+        if (!cancelled) setIndex(loaded);
       })
-      .catch((e) => {
-        if (!cancelled) setError(e.message);
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const solvedIn = (rows) => rows.filter((r) => done[r[F.link]]).length;
-  const total = data ? Object.values(data).reduce((a, rows) => a + rows.length, 0) : 0;
-  const solved = data
-    ? TOPICS.reduce((a, t) => a + solvedIn(data[t.slug] ?? []), 0)
+  const problemsOf = (slug: string): Problem[] => index?.byTopic.get(slug) ?? [];
+  const solvedIn = (problems: Problem[]): number =>
+    problems.filter((p) => solves[p.id]).length;
+  const total = index?.total ?? 0;
+  const solved = index
+    ? TOPICS.reduce((count, t) => count + solvedIn(problemsOf(t.slug)), 0)
     : 0;
 
   return (
@@ -36,11 +37,11 @@ export default function TopicsPage({ done }) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Topics</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {data
+          {index
             ? `${solved} of ${total} problems solved · ${Math.round((solved / total) * 100)}%`
             : "Loading progress…"}
         </p>
-        {data && total > 0 && (
+        {index && total > 0 && (
           <div className="mt-3 max-w-md">
             <ProgressBar done={solved} total={total} />
           </div>
@@ -55,16 +56,15 @@ export default function TopicsPage({ done }) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TOPICS.map((t) => {
-          const rows = data?.[t.slug] ?? [];
-          const s = solvedIn(rows);
+          const problems = problemsOf(t.slug);
+          const s = solvedIn(problems);
           const Icon = t.icon;
-          const complete = rows.length > 0 && s >= rows.length;
-          const diffs = { easy: 0, medium: 0, hard: 0 };
-          for (const r of rows) {
-            const d = (r[F.difficulty] || "").toLowerCase();
-            if (d in diffs) diffs[d]++;
+          const complete = problems.length > 0 && s >= problems.length;
+          const diffs: Record<string, number> = { easy: 0, medium: 0, hard: 0 };
+          for (const problem of problems) {
+            if (problem.difficulty in diffs) diffs[problem.difficulty]++;
           }
-          const pct = rows.length ? Math.round((s / rows.length) * 100) : 0;
+          const pct = problems.length ? Math.round((s / problems.length) * 100) : 0;
           return (
             <div
               key={t.slug}
@@ -85,11 +85,11 @@ export default function TopicsPage({ done }) {
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {complete ? (
                       <span className="font-medium text-emerald-700 dark:text-emerald-400">
-                        Completed · {s}/{rows.length}
+                        Completed · {s}/{problems.length}
                       </span>
                     ) : (
                       <span>
-                        {s}/{rows.length} solved · {pct}%
+                        {s}/{problems.length} solved · {pct}%
                       </span>
                     )}
                   </p>
@@ -105,25 +105,25 @@ export default function TopicsPage({ done }) {
                 </a>
               </div>
               <div className="mt-3">
-                <ProgressBar done={s} total={rows.length} />
+                <ProgressBar done={s} total={problems.length} />
               </div>
               <div className="mt-3 flex items-center justify-between gap-3">
-                {rows.length > 0 && (
+                {problems.length > 0 && (
                   <div
                     className="flex h-2 w-[30%] overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
                     title={`${diffs.easy} easy · ${diffs.medium} medium · ${diffs.hard} hard`}
                   >
                     <div
                       className="h-full bg-emerald-500/70"
-                      style={{ width: `${(diffs.easy / rows.length) * 100}%` }}
+                      style={{ width: `${(diffs.easy / problems.length) * 100}%` }}
                     />
                     <div
                       className="h-full bg-amber-500/70"
-                      style={{ width: `${(diffs.medium / rows.length) * 100}%` }}
+                      style={{ width: `${(diffs.medium / problems.length) * 100}%` }}
                     />
                     <div
                       className="h-full bg-rose-500/70"
-                      style={{ width: `${(diffs.hard / rows.length) * 100}%` }}
+                      style={{ width: `${(diffs.hard / problems.length) * 100}%` }}
                     />
                   </div>
                 )}
