@@ -10,7 +10,6 @@ import {
   GridIcon,
   MenuIcon,
   NotesIcon,
-  SettingsIcon,
   TrophyIcon,
   XIcon,
 } from "./icons.jsx";
@@ -26,7 +25,6 @@ const LINKS: HeaderLink[] = [
   { to: "/topics", label: "Topics", Icon: GridIcon },
   { to: "/progress", label: "Progress", Icon: ChartIcon },
   { to: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
-  { to: "/settings", label: "Settings", Icon: SettingsIcon },
 ];
 
 const navLink =

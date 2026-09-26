@@ -17,7 +17,7 @@ import LeaderboardPage from "./features/leaderboard/LeaderboardPage.jsx";
 // rewrites, so deep links only work with hash-based routing.
 export default function App() {
   const { solves, ready, toggle, reset, replaceAll } = useSolves();
-  const { theme, setTheme } = useTheme();
+  useTheme();
   const { user } = useAuth();
   const { status: syncStatus } = useCloudSync(user);
 
@@ -37,7 +37,7 @@ export default function App() {
             <Route path="/notes" element={<NotesPage />} />
             <Route
               path="/settings"
-              element={<SettingsPage solves={solves} onReplace={replaceAll} onReset={reset} theme={theme} setTheme={setTheme} user={user} syncStatus={syncStatus} />}
+              element={<SettingsPage solves={solves} onReplace={replaceAll} onReset={reset} user={user} syncStatus={syncStatus} />}
             />
             <Route path="/topics" element={<TopicsPage solves={solves} />} />
             <Route path="/progress" element={<ProgressPage solves={solves} />} />

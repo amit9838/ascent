@@ -6,8 +6,6 @@ import {
   BackIcon,
   DatabaseIcon,
   DownloadIcon,
-  MoonIcon,
-  SunIcon,
   TrashIcon,
   UploadIcon,
   UserIcon,
@@ -26,8 +24,8 @@ import { getProfile, updateProfileDoc } from "../../lib/cloud/follow.js";
 import { refreshProfileSummary, syncErrorHint } from "../../lib/cloud/sync.ts";
 import type { SyncStatus } from "../../lib/cloud/sync/engine.ts";
 
-// Priority order: Account (identity/sync) → Data (safety) → Appearance
-// (preference) → Danger zone (destructive, always last, isolated).
+// Priority order: Account (identity/sync) → Data (safety) → Danger zone
+// (destructive, always last, isolated).
 // Industry-standard layout: setting rows with label+description on the
 // left and the control on the right, divided by hairlines.
 
@@ -375,16 +373,12 @@ export default function SettingsPage({
   solves,
   onReplace,
   onReset,
-  theme,
-  setTheme,
   user,
   syncStatus,
 }: {
   solves: Record<string, string>;
   onReplace: (map: Record<string, string>) => Promise<void>;
   onReset: () => Promise<void>;
-  theme: string;
-  setTheme: (mode: "light" | "dark") => void;
   user: User | null;
   syncStatus: SyncStatus;
 }) {
@@ -436,19 +430,6 @@ export default function SettingsPage({
       setMessage({ ok: false, text: "Could not read the selected file." });
     reader.readAsText(file);
   };
-
-  const themeBtn = (mode: "light" | "dark", icon: ReactNode, label: string) => (
-    <button
-      onClick={() => setTheme(mode)}
-      className={`flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
-        theme === mode
-          ? "bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
-          : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-      }`}
-    >
-      {icon} {label}
-    </button>
-  );
 
   return (
     <div>
@@ -509,23 +490,6 @@ export default function SettingsPage({
               {message.text}
             </p>
           )}
-        </Section>
-
-        <Section
-          icon={<SunIcon className="h-5 w-5" />}
-          chip="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-          title="Appearance"
-          desc="Personalise how Ascent looks on this device."
-        >
-          <Row
-            title="Theme"
-            desc="Defaults to your system preference; remembered per device."
-          >
-            <div className="flex w-full rounded-lg border border-slate-300 p-1 sm:inline-flex sm:w-auto dark:border-slate-600">
-              {themeBtn("light", <SunIcon className="h-4 w-4" />, "Light")}
-              {themeBtn("dark", <MoonIcon className="h-4 w-4" />, "Dark")}
-            </div>
-          </Row>
         </Section>
 
         <Section
