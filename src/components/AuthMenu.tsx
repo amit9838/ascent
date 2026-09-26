@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { User } from "firebase/auth";
+import { Link } from "react-router-dom";
 import type { SyncStatus } from "../lib/cloud/sync/engine.ts";
 import {
   authErrorMessage,
@@ -12,6 +13,14 @@ import {
 } from "../lib/auth.js";
 import { cloudEnabled } from "../lib/cloud/firebase.js";
 import { syncErrorHint } from "../lib/cloud/sync.ts";
+import { useTheme } from "../lib/entities/prefs.ts";
+import {
+  ArrowRightIcon,
+  MoonIcon,
+  SettingsIcon,
+  SunIcon,
+  UserIcon,
+} from "./icons.jsx";
 import {
   Avatar,
   Button,
@@ -181,6 +190,9 @@ function statusText(status: SyncStatus | null): string {
   );
 }
 
+const rowCls =
+  "flex w-full gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
+
 export default function AuthMenu({
   user,
   status,
@@ -190,61 +202,126 @@ export default function AuthMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
-  if (!cloudEnabled()) return null;
-
-  if (!user) {
-    return (
-      <>
-        <Button onClick={() => setModal(true)}>Sign in</Button>
-        {modal && <AuthModal onClose={() => setModal(false)} />}
-      </>
-    );
-  }
+  const trigger = user ? (
+    <button
+      onClick={() => setOpen(!open)}
+      className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100 text-sm font-bold text-slate-700 hover:ring-2 hover:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+      aria-label="Account"
+      aria-expanded={open}
+    >
+      <Avatar
+        src={user.photoURL}
+        name={user.displayName || user.email}
+        className="h-full w-full text-sm"
+      />
+    </button>
+  ) : (
+    <button
+      onClick={() => setOpen(!open)}
+      className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+      aria-label="Account menu"
+      aria-expanded={open}
+    >
+      <UserIcon className="h-4 w-4" />
+      Account
+    </button>
+  );
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-      trigger={
-        <button
-          onClick={() => setOpen(!open)}
-          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100 text-sm font-bold text-slate-700 hover:ring-2 hover:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-          aria-label="Account"
+    <>
+      <Popover open={open} onOpenChange={setOpen} trigger={trigger} panelClassName="w-64">
+        {user && (
+          <>
+            <div className="px-2 py-1">
+              <p className="truncate font-medium">{user.displayName || "Signed in"}</p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                {user.email}
+              </p>
+            </div>
+            <Divider className="my-2" />
+          </>
+        )}
+
+        <Link
+          to="/settings"
+          onClick={() => setOpen(false)}
+          className={`${rowCls} items-center`}
         >
-          <Avatar
-            src={user.photoURL}
-            name={user.displayName || user.email}
-            className="h-full w-full text-sm"
-          />
+          <SettingsIcon className="h-4 w-4 shrink-0" />
+          Settings
+        </Link>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className={`${rowCls} items-center`}
+        >
+          {theme === "dark" ? (
+            <MoonIcon className="h-4 w-4 shrink-0" />
+          ) : (
+            <SunIcon className="h-4 w-4 shrink-0" />
+          )}
+          Theme
+          <span className="ml-auto text-xs font-normal text-slate-400 dark:text-slate-500">
+            {theme === "dark" ? "Dark" : "Light"}
+          </span>
         </button>
-      }
-      panelClassName="w-56"
-    >
-      <p className="truncate font-medium">{user.displayName || "Signed in"}</p>
-      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-        {user.email}
-      </p>
-      <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(status)}`} />
-        {statusText(status)}
-      </div>
-      {status?.state === "error" && (
-        <p className="mt-1 rounded-md bg-rose-50 p-2 text-[11px] leading-snug text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
-          {syncErrorHint(status)}
-        </p>
-      )}
-      <Button
-        variant="secondary"
-        size="sm"
-        className="mt-2 w-full"
-        onClick={async () => {
-          setOpen(false);
-          await signOutUser().catch(() => {});
-        }}
-      >
-        Sign out (keep local data)
-      </Button>
-    </Popover>
+
+        {user ? (
+          <>
+            <Divider className="my-2" />
+            <div className="flex items-center gap-2 px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot(status)}`} />
+              {statusText(status)}
+            </div>
+            {status?.state === "error" && (
+              <p className="mt-1 rounded-md bg-rose-50 p-2 text-[11px] leading-snug text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                {syncErrorHint(status)}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={async () => {
+                setOpen(false);
+                await signOutUser().catch(() => {});
+              }}
+              className="mt-1 flex w-full items-start gap-3 rounded-lg bg-rose-50 px-2 py-2.5 text-left text-sm font-medium text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-950"
+            >
+              <ArrowRightIcon className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                <span className="block">Sign out</span>
+                <span className="block text-xs font-normal text-rose-500 dark:text-rose-400">
+                  Keep local data
+                </span>
+              </span>
+            </button>
+          </>
+        ) : (
+          cloudEnabled() && (
+            <>
+              <Divider className="my-2" />
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setModal(true);
+                }}
+                className="flex w-full items-start gap-3 rounded-lg bg-blue-600 px-2 py-2.5 text-left text-sm font-medium text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+              >
+                <UserIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  <span className="block">Sign in</span>
+                  <span className="block text-xs font-normal text-blue-100 dark:text-blue-200">
+                    Enable cloud sync
+                  </span>
+                </span>
+              </button>
+            </>
+          )
+        )}
+      </Popover>
+      {modal && <AuthModal onClose={() => setModal(false)} />}
+    </>
   );
 }
