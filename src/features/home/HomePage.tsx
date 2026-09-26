@@ -6,19 +6,19 @@ import type { Problem, ProblemIndex } from "../../lib/data/problemRows.ts";
 import { buildPointsMap, pointsOf } from "../../lib/gamification/points.ts";
 import { loadIgnored, pickQuestionOfTheDay, saveIgnored } from "./qotd.js";
 import type { QotdCache, QotdPick } from "./qotd.ts";
-import { DifficultyBadge, ExternalLink } from "../../components/ui.jsx";
+import { DifficultyBadge } from "../../components/ui.jsx";
 import {
   ActivityHeatmap,
   OverviewRow,
   WeeklyGoalCard,
 } from "./dashboard.jsx";
 import { RewardsCard } from "./rewards.jsx";
-import { ArrowRightIcon, CheckIcon } from "../../components/icons.jsx";
+import { ArrowRightIcon, CheckIcon, ExternalIcon } from "../../components/icons.jsx";
 
-const primaryBtn =
-  "rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700";
 const ghostBtn =
-  "rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200";
+  "rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200";
+const doneBtn =
+  "rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 dark:hover:bg-emerald-900/60 dark:hover:text-emerald-300";
 
 function QotdCard({
   qotd,
@@ -45,23 +45,42 @@ function QotdCard({
         dimmed ? "opacity-60" : ""
       }`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            <span className="relative flex h-2 w-2">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            Question of the day &middot; {qotd.dateLabel}
-            {ignored && !solved && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                Ignored
-              </span>
-            )}
-          </p>
-          <h2 className="mt-0.5 text-lg font-bold">
-            <ExternalLink href={problem.url}>{problem.name}</ExternalLink>
-          </h2>
+            <h2 className="text-lg font-bold">{problem.name}</h2>
+          </div>
+          {(problem.lcUrl || problem.lcName) && (
+            <p className="mt-1 text-sm">
+              {problem.lcUrl ? (
+                <a
+                  href={problem.lcUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex max-w-full items-center gap-1.5 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  <span className="min-w-0 truncate">{problem.lcName}</span>
+                  <span className="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    leetcode
+                  </span>
+                  <ExternalIcon className="h-3.5 w-3.5 shrink-0" />
+                </a>
+              ) : (
+                <span className="inline-flex max-w-full items-center gap-1.5">
+                  <span className="min-w-0 truncate text-slate-600 dark:text-slate-300">
+                    {problem.lcName}
+                  </span>
+                  <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    leetcode
+                  </span>
+                </span>
+              )}
+            </p>
+          )}
           <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
             <Link
               to={`/topic/${qotd.topic.slug}`}
@@ -73,38 +92,45 @@ function QotdCard({
             <DifficultyBadge level={problem.difficulty} />
             {problem.accuracy ? ` · ${problem.accuracy} accuracy` : ""}
           </p>
-          {problem.lcName && (
-            <p className="mt-0.5 text-sm">
-              <ExternalLink href={problem.lcUrl}>{problem.lcName}</ExternalLink>
-            </p>
-          )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {solved ? (
-            <>
-              <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                <CheckIcon className="h-4 w-4" /> Solved
+        <div className="flex shrink-0 flex-col items-end justify-between gap-1.5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <span className="hidden sm:inline">
+              Question of the day &middot; {qotd.dateLabel}
+            </span>
+            {ignored && !solved && (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                Ignored
               </span>
-              <button onClick={() => onToggle(qotd.id)} className={ghostBtn}>
-                Undo
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={() => onToggle(qotd.id)} className={primaryBtn}>
-                Mark done
-              </button>
-              {ignored ? (
-                <button onClick={onUnignore} className={ghostBtn}>
-                  Unignore
+            )}
+          </p>
+          <div className="flex items-center gap-2">
+            {solved ? (
+              <>
+                <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                  <CheckIcon className="h-4 w-4" /> Solved
+                </span>
+                <button onClick={() => onToggle(qotd.id)} className={ghostBtn}>
+                  Undo
                 </button>
-              ) : (
-                <button onClick={onIgnore} className={ghostBtn}>
-                  Ignore
+              </>
+            ) : (
+              <>
+                <button onClick={() => onToggle(qotd.id)} className={doneBtn}>
+                  Mark done
                 </button>
-              )}
-            </>
-          )}
+                {ignored ? (
+                  <button onClick={onUnignore} className={ghostBtn}>
+                    Unignore
+                  </button>
+                ) : (
+                  <button onClick={onIgnore} className={ghostBtn}>
+                    Ignore
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </section>
