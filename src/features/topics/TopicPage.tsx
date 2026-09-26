@@ -5,6 +5,7 @@ import { loadProblemIndex } from "../../lib/data/problems.js";
 import type { Problem } from "../../lib/data/problemRows.ts";
 import { DifficultyBadge, ExternalLink, ProgressBar } from "../../components/ui.jsx";
 import { BackIcon, ExternalIcon, SearchIcon } from "../../components/icons.jsx";
+import { useSeo } from "../../lib/seo.ts";
 
 export default function TopicPage({
   solves,
@@ -15,6 +16,12 @@ export default function TopicPage({
 }) {
   const { slug } = useParams();
   const topic = getTopic(slug ?? "");
+  useSeo({
+    title: topic ? `${topic.name} problems — Ascent` : "Topic not found — Ascent",
+    description: topic
+      ? `Practice ${topic.name} problems on Ascent — filter by difficulty, mark solved and track your progress.`
+      : "This topic could not be found on Ascent.",
+  });
 
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [error, setError] = useState<string | null>(null);

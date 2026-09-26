@@ -12,11 +12,17 @@ import {
   ListIcon,
 } from "../../components/icons.jsx";
 import { useTopicsView } from "../../lib/entities/prefs.ts";
+import { useSeo } from "../../lib/seo.ts";
 
 export default function TopicsPage({ solves }: { solves: Record<string, string> }) {
   const [index, setIndex] = useState<ProblemIndex | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { view, setView } = useTopicsView();
+  useSeo({
+    title: "Topics — Ascent",
+    description:
+      "Browse every DSA topic on Ascent — arrays, graphs, dynamic programming, trees and more — with solved counts, difficulty mix and progress.",
+  });
 
   useEffect(() => {
     let cancelled = false;

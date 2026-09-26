@@ -14,6 +14,7 @@ import {
 } from "./dashboard.jsx";
 import { RewardsCard } from "./rewards.jsx";
 import { ArrowRightIcon, CheckIcon, ExternalIcon } from "../../components/icons.jsx";
+import { useSeo } from "../../lib/seo.ts";
 
 const ghostBtn =
   "rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200";
@@ -146,6 +147,11 @@ export default function HomePage({
 }) {
   const [index, setIndex] = useState<ProblemIndex | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useSeo({
+    title: "Ascent — DSA practice tracker",
+    description:
+      "Track your DSA grind: 14 topics, question of the day, streaks, points and optional cloud sync. Local-first and offline-capable.",
+  });
 
   useEffect(() => {
     let cancelled = false;
