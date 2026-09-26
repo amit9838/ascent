@@ -20,6 +20,45 @@ export function ProgressBar({
   );
 }
 
+export interface DifficultyMix {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
+export function DifficultyBar({
+  mix,
+  total,
+  className = "",
+}: {
+  mix: DifficultyMix;
+  total: number;
+  className?: string;
+}) {
+  if (total <= 0) return null;
+  const segments = [
+    { count: mix.easy, fill: "bg-emerald-500/70" },
+    { count: mix.medium, fill: "bg-amber-500/70" },
+    { count: mix.hard, fill: "bg-rose-500/70" },
+  ].filter((seg) => seg.count > 0);
+  return (
+    <div
+      className={`h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 ${className}`}
+      title={`${mix.easy} easy · ${mix.medium} medium · ${mix.hard} hard`}
+    >
+      <div className="flex h-full w-full gap-0.5">
+        {segments.map((seg) => (
+          <div
+            key={seg.fill}
+            className={`h-full rounded-full ${seg.fill}`}
+            style={{ flexGrow: seg.count }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const DIFF_STYLES: Record<string, string> = {
   easy: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
   medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
