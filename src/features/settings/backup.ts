@@ -144,7 +144,7 @@ function cleanRewardEvents(raw: unknown): RewardEventRecord[] | undefined {
       isObj(e) &&
       typeof e.id === "string" &&
       e.id !== "" &&
-      (e.kind === "daily" || e.kind === "weekly") &&
+      (e.kind === "daily" || e.kind === "crown" || e.kind === "weekly") &&
       typeof e.periodStart === "string" &&
       e.periodStart !== "" &&
       typeof e.target === "number" &&

@@ -211,7 +211,7 @@ export default function PublicProfilePage() {
         <section className={`${CARD} p-5 sm:p-6`}>
           <SectionHead
             title="Trophy case"
-            sub="Coins earned by hitting daily targets and perfect weeks."
+            sub="Coins earned by hitting daily targets and 3-day star runs."
           />
           <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:divide-x sm:divide-slate-200 sm:gap-8 dark:divide-slate-700">
             {s.stars > 0 && (
@@ -228,7 +228,7 @@ export default function PublicProfilePage() {
                 coin={SapphireCoin}
                 count={s.crowns}
                 name="Sapphire Crowns"
-                req="earned with perfect 7-day weeks"
+                req="earned with 3-day star runs"
               />
             )}
           </div>

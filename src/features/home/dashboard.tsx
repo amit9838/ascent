@@ -230,16 +230,34 @@ export function ActivityHeatmap({
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         Solves per day · last 15 weeks
       </p>
-      <div className="mt-3 grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto pb-1">
-        {cols.flatMap((days, w) =>
-          days.map((d) => (
-            <div
-              key={`${w}-${d.key}`}
-              title={`${d.label}: ${d.points} pts`}
-              className={`h-3 w-3 rounded-[3px] ${cellColor(d.points, d.future)}`}
-            />
-          ))
-        )}
+      <div className="mt-3 flex gap-2">
+        {/* One-letter weekday labels (M T W T F S S) stay put while the grid
+            scrolls. py-0.5 matches the grid's padding. */}
+        <div
+          aria-hidden="true"
+          className="grid shrink-0 grid-rows-7 gap-1 py-0.5 text-center text-[10px] leading-3 text-slate-500 dark:text-slate-400"
+        >
+          {(cols[0] ?? []).map((d) => (
+            <span key={d.key} className="h-3">
+              {new Date(`${d.key}T12:00:00`).toLocaleDateString(undefined, { weekday: "narrow" })}
+            </span>
+          ))}
+        </div>
+        {/* p-0.5 leaves room for today's ring inside the scroll container. */}
+        <div className="grid min-w-0 flex-1 grid-flow-col grid-rows-7 gap-1 overflow-x-auto p-0.5 pb-1">
+          {cols.flatMap((days, w) =>
+            days.map((d) => (
+              <div
+                key={`${w}-${d.key}`}
+                title={`${d.isToday ? "Today" : d.label}: ${d.points} pts`}
+                aria-current={d.isToday ? "date" : undefined}
+                className={`h-3 w-3 rounded-[3px] ${cellColor(d.points, d.future)} ${
+                  d.isToday ? "ring-1 ring-blue-500/50 dark:ring-blue-400/50" : ""
+                }`}
+              />
+            ))
+          )}
+        </div>
       </div>
       <div className="mt-2 flex items-center justify-end gap-1 text-xs text-slate-500 dark:text-slate-400">
         Less

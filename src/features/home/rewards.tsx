@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { dayKey, dayPoints, weekStart } from "../../lib/gamification/activity.ts";
+import { CROWN_DAYS, crownDays, crownRunLength } from "../../lib/gamification/crowns.ts";
 import {
+  collectCrown,
   collectDaily,
-  collectWeekly,
   dailyTarget,
   refreshRewards,
 } from "../../lib/gamification/rewards.ts";
@@ -27,7 +28,7 @@ export function RewardsCard({
 }) {
   const [target] = useWeeklyTarget();
   const dt = dailyTarget(target);
-  const [rewards, setRewards] = useState<RewardStatusView>({ daily: {}, weekly: {} });
+  const [rewards, setRewards] = useState<RewardStatusView>({ daily: {}, crowns: {} });
 
   useEffect(() => {
     let cancelled = false;
@@ -43,8 +44,8 @@ export function RewardsCard({
     setRewards(await collectDaily(day));
   };
 
-  const claimWeekly = async (wk: string): Promise<void> => {
-    setRewards(await collectWeekly(wk));
+  const claimCrown = async (start: string): Promise<void> => {
+    setRewards(await collectCrown(start));
   };
 
   const todayK = dayKey();
@@ -52,15 +53,16 @@ export function RewardsCard({
   const todayCount = counts[todayK] ?? 0;
   const todayStatus = rewards.daily[todayK]; // earned | collected | undefined
 
+  const crownEntries = Object.entries(rewards.crowns).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const closedToday = crownEntries.find(([start]) => crownDays(start).at(-1) === todayK);
+  // Dots: this week, Monday–Sunday, with a check on each star day.
   const monday = weekStart();
-  const weekKey = dayKey(monday);
-  const days = [];
-  for (let i = 0; i < 7; i++) {
+  const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(d.getDate() + i);
+    d.setHours(12);
     const k = dayKey(d);
-    const c = counts[k] ?? 0;
-    days.push({
+    return {
       key: k,
       initial: d.toLocaleDateString(undefined, { weekday: "narrow" }),
       full: d.toLocaleDateString(undefined, {
@@ -68,14 +70,16 @@ export function RewardsCard({
         month: "short",
         day: "numeric",
       }),
-      points: c,
-      earned: c >= dt && k <= todayK,
+      points: counts[k] ?? 0,
+      earned: k in rewards.daily,
       future: k > todayK,
       isToday: k === todayK,
-    });
-  }
-  const hitDays = days.filter((d) => d.earned).length;
-  const weekStatus = rewards.weekly[weekKey];
+    };
+  });
+  const hitDays = crownRunLength(Object.keys(rewards.daily), Object.keys(rewards.crowns));
+  // Oldest unclaimed crown first (may be from an earlier run).
+  const claimable = crownEntries.find(([, status]) => status === "earned")?.[0];
+  const collectedToday = closedToday?.[1] === "collected";
 
   return (
     <section className={`${card} mb-6`}>
@@ -136,14 +140,14 @@ export function RewardsCard({
         <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-800/60">
           <div className="flex items-center gap-3">
             <SapphireCoin
-            className={`h-11 w-11 shrink-0 drop-shadow-md ${weekStatus ? "" : "grayscale opacity-50"}`}
+            className={`h-11 w-11 shrink-0 drop-shadow-md ${claimable || collectedToday ? "" : "grayscale opacity-50"}`}
           />
             <div className="min-w-0">
               <p className="text-sm font-semibold">Sapphire Crown</p>
               <p className="text-2xl font-bold leading-tight">
                 {hitDays}
                 <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-                  /7 days
+                  /{CROWN_DAYS} days in a row
                 </span>
               </p>
             </div>
@@ -151,7 +155,7 @@ export function RewardsCard({
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
             <div
               className="h-full rounded-full bg-gradient-to-r from-violet-600 via-purple-300 to-violet-600 transition-all duration-500"
-              style={{ width: `${Math.round((hitDays / 7) * 100)}%` }}
+              style={{ width: `${Math.round((hitDays / CROWN_DAYS) * 100)}%` }}
             />
           </div>
           <div className="mt-2 flex items-center gap-1.5">
@@ -172,16 +176,18 @@ export function RewardsCard({
             ))}
           </div>
           <div className="mt-2 min-h-7 text-sm">
-            {weekStatus === "collected" ? (
+            {claimable ? (
+              <button onClick={() => claimCrown(claimable)} className={primaryBtn}>
+                Claim
+              </button>
+            ) : collectedToday ? (
               <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                 <CheckIcon className="h-4 w-4" /> Collected
               </span>
-            ) : weekStatus === "earned" ? (
-              <button onClick={() => claimWeekly(weekKey)} className={primaryBtn}>
-                Claim
-              </button>
             ) : (
-              <span className="text-sm text-slate-500 dark:text-slate-400">Win all 7 days</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">
+                {CROWN_DAYS - hitDays} more {CROWN_DAYS - hitDays === 1 ? "day" : "days"} in a row
+              </span>
             )}
           </div>
         </div>

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { TOPICS } from "../../data/topics.ts";
 import { loadProblemIndex } from "../../lib/data/problems.ts";
 import type { Problem, ProblemIndex } from "../../lib/data/problemRows.ts";
 import { buildPointsMap } from "../../lib/gamification/points.ts";
 import { useWeeklyTarget } from "../../lib/entities/settings.ts";
+import { dayKey, dayPoints } from "../../lib/gamification/activity.ts";
+import { CROWN_DAYS, crownRunLength, perfectWeekCount } from "../../lib/gamification/crowns.ts";
 import {
+  collectCrown,
   collectDaily,
-  collectWeekly,
   dailyTarget,
   refreshRewards,
 } from "../../lib/gamification/rewards.ts";
@@ -34,11 +36,105 @@ function fmtFull(key: string /* YYYY-MM-DD, parsed without timezone shift */): s
   });
 }
 
-function fmtWeek(mondayKey: string): string {
-  const [y, m, d] = mondayKey.split("-").map(Number);
+function fmtRun(startKey: string): string {
+  const [y, m, d] = startKey.split("-").map(Number);
   const f = (dt: Date): string =>
     dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  return `${f(new Date(y, m - 1, d))} – ${f(new Date(y, m - 1, d + 6))}`;
+  return `${f(new Date(y, m - 1, d))} – ${f(new Date(y, m - 1, d + CROWN_DAYS - 1))}`;
+}
+
+const ACCENTS = {
+  amber: {
+    surface: "from-amber-50 dark:from-amber-400/[0.08]",
+    badge:
+      "bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/25",
+    fill: "bg-amber-500 dark:bg-amber-400",
+  },
+  violet: {
+    surface: "from-violet-50 dark:from-violet-400/[0.08]",
+    badge:
+      "bg-violet-50 text-violet-800 ring-violet-600/20 dark:bg-violet-400/10 dark:text-violet-300 dark:ring-violet-400/25",
+    fill: "bg-violet-500 dark:bg-violet-400",
+  },
+} as const;
+
+// Collection summary for one coin type: stack, collected count, an
+// unclaimed badge, and a meter toward the next coin. `segments` draws the
+// meter as discrete steps (days in a run) instead of a continuous bar.
+function RewardCard({
+  coin,
+  accent,
+  name,
+  collected,
+  pending,
+  meterLabel,
+  done,
+  total,
+  unit,
+  segments = false,
+}: {
+  coin: ComponentType<{ className?: string }>;
+  accent: keyof typeof ACCENTS;
+  name: string;
+  collected: number;
+  pending: number;
+  meterLabel: string;
+  done: number;
+  total: number;
+  unit: string;
+  segments?: boolean;
+}) {
+  const a = ACCENTS[accent];
+  const track = "h-1.5 rounded-full bg-slate-200/80 dark:bg-slate-700/80";
+  return (
+    <div
+      className={`rounded-xl border border-slate-200 bg-white bg-gradient-to-br ${a.surface} via-white via-40% to-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:via-slate-900 dark:to-slate-900`}
+    >
+      <div className="flex items-center gap-5">
+        <CoinStack coin={coin} count={collected} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-sm font-medium text-slate-600 dark:text-slate-300">{name}</h2>
+            {pending > 0 && (
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${a.badge}`}
+              >
+                {pending} to claim
+              </span>
+            )}
+          </div>
+          <p className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-3xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white">
+              {collected}
+            </span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">collected</span>
+          </p>
+          <div className="mt-4" aria-hidden="true">
+            {segments ? (
+              <div className="flex gap-1">
+                {Array.from({ length: total }, (_, i) => (
+                  <div key={i} className={`flex-1 ${track} ${i < done ? a.fill : ""}`} />
+                ))}
+              </div>
+            ) : (
+              <div className={`overflow-hidden ${track}`}>
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${a.fill}`}
+                  style={{ width: `${Math.min(100, Math.round((done / Math.max(1, total)) * 100))}%` }}
+                />
+              </div>
+            )}
+          </div>
+          <p className="mt-1.5 flex justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <span>{meterLabel}</span>
+            <span className="tabular-nums">
+              {Math.min(done, total)} / {total} {unit}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const stepper =
@@ -162,7 +258,7 @@ function TrophyShelf({
 export default function ProgressPage({ solves }: { solves: Record<string, string> }) {
   const [index, setIndex] = useState<ProblemIndex | null>(null);
   const pointsMap = useMemo(() => buildPointsMap(index ?? {}), [index]);
-  const [rewards, setRewards] = useState<RewardStatusView>({ daily: {}, weekly: {} });
+  const [rewards, setRewards] = useState<RewardStatusView>({ daily: {}, crowns: {} });
   const [target, setTarget] = useWeeklyTarget();
 
   useEffect(() => {
@@ -181,8 +277,8 @@ export default function ProgressPage({ solves }: { solves: Record<string, string
   const claimDaily = async (day: string): Promise<void> => {
     setRewards(await collectDaily(day));
   };
-  const claimWeekly = async (wk: string): Promise<void> => {
-    setRewards(await collectWeekly(wk));
+  const claimCrown = async (start: string): Promise<void> => {
+    setRewards(await collectCrown(start));
   };
 
   useEffect(() => {
@@ -210,11 +306,13 @@ export default function ProgressPage({ solves }: { solves: Record<string, string
   const daily = Object.entries(rewards.daily).sort((a, b) =>
     a[0] < b[0] ? 1 : -1
   );
-  const weekly = Object.entries(rewards.weekly).sort((a, b) =>
+  const crowns = Object.entries(rewards.crowns).sort((a, b) =>
     a[0] < b[0] ? 1 : -1
   );
   const stars = daily.filter(([, s]) => s === "collected").length;
-  const trophies = weekly.filter(([, s]) => s === "collected").length;
+  const trophies = crowns.filter(([, s]) => s === "collected").length;
+  const todayPoints = dayPoints(solves, pointsMap)[dayKey()] ?? 0;
+  const runDays = crownRunLength(Object.keys(rewards.daily), Object.keys(rewards.crowns));
   const rank = index ? currentRank(solved, total) : { current: null, next: null };
   const mix: Record<string, number> = { easy: 0, medium: 0, hard: 0 };
   if (index) {
@@ -242,37 +340,30 @@ export default function ProgressPage({ solves }: { solves: Record<string, string
         </p>
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <div className="relative flex items-center gap-5 overflow-hidden rounded-xl border border-amber-200/40 bg-gradient-to-br from-amber-50 via-white to-orange-100/60 p-5 shadow-sm dark:border-amber-900/30 dark:from-amber-950/50 dark:via-slate-900 dark:to-slate-900">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-amber-300/40 blur-2xl dark:bg-amber-500/10" />
-          <CoinStack coin={GoldCoin} count={stars} />
-          <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-400">
-              Daybreak Stars
-            </p>
-            <p className="mt-0.5 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              × {stars}
-            </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              claimed by hitting the daily target
-            </p>
-          </div>
-        </div>
-        <div className="relative flex items-center gap-5 overflow-hidden rounded-xl border border-violet-200/40 bg-gradient-to-br from-violet-50 via-white to-purple-100/60 p-5 shadow-sm dark:border-violet-900/30 dark:from-violet-950/50 dark:via-slate-900 dark:to-slate-900">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-violet-300/40 blur-2xl dark:bg-violet-500/10" />
-          <CoinStack coin={SapphireCoin} count={trophies} />
-          <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-widest text-violet-700 dark:text-violet-400">
-              Sapphire Crowns
-            </p>
-            <p className="mt-0.5 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              × {trophies}
-            </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              claimed with perfect 7-day weeks
-            </p>
-          </div>
-        </div>
+      <div className="mb-6 grid gap-4 md:grid-cols-2">
+        <RewardCard
+          coin={GoldCoin}
+          accent="amber"
+          name="Daybreak Stars"
+          collected={stars}
+          pending={daily.length - stars}
+          meterLabel="Today's target"
+          done={todayPoints}
+          total={dailyTarget(target)}
+          unit="pts"
+        />
+        <RewardCard
+          coin={SapphireCoin}
+          accent="violet"
+          name="Sapphire Crowns"
+          collected={trophies}
+          pending={crowns.length - trophies}
+          meterLabel="Star days in a row"
+          done={runDays}
+          total={CROWN_DAYS}
+          unit="days"
+          segments
+        />
       </div>
 
       <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
@@ -315,7 +406,7 @@ export default function ProgressPage({ solves }: { solves: Record<string, string
           solves={solves}
           solved={solved}
           total={total}
-          perfectWeeks={Object.keys(rewards.weekly).length}
+          perfectWeeks={perfectWeekCount(Object.keys(rewards.daily))}
         />
       ) : null}
 
@@ -418,20 +509,20 @@ export default function ProgressPage({ solves }: { solves: Record<string, string
 
         <section className="rounded-xl border border-slate-200 bg-white p-5  shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <h2 className="text-lg font-semibold">Sapphire Crowns</h2>
-          {weekly.length === 0 ? (
+          {crowns.length === 0 ? (
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              No Sapphire Crowns yet — hit the daily target 7 days in a row.
+              No Sapphire Crowns yet — hit the daily target {CROWN_DAYS} days in a row.
             </p>
           ) : (
             <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
-              {weekly.map(([wk, st]) => (
+              {crowns.map(([start, st]) => (
                 <li
-                  key={wk}
+                  key={start}
                   className="flex items-center justify-between gap-3 py-1.5"
                 >
                   <span className="flex items-center gap-3">
                     <TrophyIcon className="h-5 w-5 shrink-0 text-slate-400" />
-                    <span className="text-sm font-medium">{fmtWeek(wk)}</span>
+                    <span className="text-sm font-medium">{fmtRun(start)}</span>
                   </span>
                   {st === "collected" ? (
                     <span className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
@@ -439,7 +530,7 @@ export default function ProgressPage({ solves }: { solves: Record<string, string
                     </span>
                   ) : (
                     <button
-                      onClick={() => claimWeekly(wk)}
+                      onClick={() => claimCrown(start)}
                       className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                     >
                       Claim
