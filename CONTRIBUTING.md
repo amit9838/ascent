@@ -11,7 +11,7 @@ Thanks for your interest in contributing! This guide covers everything you need 
 
 ## Prerequisites
 
-- **Node.js 18+** (20+ recommended) and **npm**
+- **Node.js 22.18+** and **npm** (`npm test` relies on Node's built-in TypeScript type stripping)
 - A modern browser (Chrome/Edge/Firefox/Safari)
 - Git
 
@@ -31,6 +31,8 @@ npm run dev        # http://localhost:5173
 | Command          | Description                          |
 | ---------------- | ------------------------------------ |
 | `npm run dev`    | Start the dev server                 |
+| `npm run typecheck` | Type-check with `tsc --noEmit`    |
+| `npm test`       | Unit tests (`src/**/*.test.ts`, Node's built-in runner) |
 | `npm run build`  | Production build → `dist/` (run before every PR) |
 | `npm run preview`| Preview the production build locally |
 | `npm run deploy` | Build + publish to GitHub Pages (maintainers only) |
@@ -55,7 +57,7 @@ npx firebase-tools emulators:start --only auth,firestore
 
 ```
 src/
-├── App.jsx                 # Hash routes (gh-pages has no URL rewrites)
+├── App.tsx                 # Hash routes (gh-pages has no URL rewrites)
 ├── components/             # Shared UI: Header, AuthMenu, coins, icons, ui
 │   └── primitives/         # Design system: Button, Input, Modal, Popover,
 │                           #   Badge, Card, Avatar, Divider, Spinner
@@ -67,30 +69,32 @@ src/
 │   ├── leaderboard/
 │   ├── profile/            # Public profiles + shared profile components
 │   └── settings/           # Settings page + profile backup/restore
-├── data/                   # Topic list + CSV loading
+├── data/topics.ts          # Topic list (order, slugs, CSV names, icons)
 ├── lib/
-│   ├── db.js               # IndexedDB gateway — the ONLY file that touches storage
-│   ├── cache.js            # In-memory TTL/tagged cache for async data
-│   ├── gamification/       # points, rewards, ranks, streaks, plans
-│   ├── notes.js            # Per-note records + aggregate-blob translation
-│   ├── progress.js         # useProgress hook (async, ready-gated)
-│   ├── auth.js             # Firebase auth helpers + useAuth
-│   ├── cloud/              # sync engine, merge strategies, connections, invites
-│   └── csv.js, cx.js, theme.js
-├── source/  (repo root)    # Raw problem CSVs (14 topics)
-└── docs/screenshots/       # README assets
+│   ├── store/              # IndexedDB schema v3 + records.ts — the ONLY
+│   │                       #   code that touches storage; useEntityState hook
+│   ├── entities/           # solves, notes, settings (synced), prefs (local)
+│   ├── data/               # Problem index built from the topic CSVs
+│   ├── cache.ts            # In-memory TTL/tagged cache for async data
+│   ├── gamification/       # points, rewards, ranks/titles, streaks/activity
+│   ├── auth.ts             # Firebase auth helpers + useAuth
+│   ├── cloud/              # sync engine + entity configs, connections,
+│   │                       #   follow, shared notes, profile summary
+│   └── csv.ts, cx.ts, seo.ts
+├── source/  (repo root)    # Raw problem CSVs (14 topics), robots.txt, sitemap
+└── docs/                   # Data-model design notes + README screenshots
 ```
 
 ## Architecture rules
 
 These keep the codebase consistent — please follow them in every PR:
 
-1. **Storage goes through `src/lib/db.js`.** Never touch `localStorage` or IndexedDB directly from features. All `db.js` functions are **async** — callers must `await` reads/writes. Writes notify subscribers with a `"local"` / `"remote"` source tag.
-2. **Cache reads with `src/lib/cache.js`.** Firestore docs, profiles, connection state, and CSVs use `cached(key, loader, { ttl, tags })`. Mutations must invalidate their tags (`forget` / `invalidateTag`); sign-out clears everything (`clearCache`).
+1. **Storage goes through `src/lib/store/`.** Never touch `localStorage` or IndexedDB directly from features — use the entity modules in `lib/entities/` (built on `store/records.ts`). All record functions are **async** — callers must `await` reads/writes. Writes notify subscribers with a `"local"` / `"remote"` source tag.
+2. **Cache reads with `src/lib/cache.ts`.** Firestore docs, profiles, connection state, and CSVs use `cached(key, loader, { ttl, tags })`. Mutations must invalidate their tags (`forget` / `invalidateTag`); sign-out clears everything (`clearCache`).
 3. **Compose UI from `components/primitives/`.** Don't re-declare Tailwind button/input/modal strings — use `Button`, `Input`/`Field`, `Modal`, `Popover`, `Badge`, `Card`, `Avatar`. Use the `cx()` helper for conditional classes.
 4. **Keep features co-located.** New product area? New folder under `features/` with its pages + components + state. Shared building blocks go in `components/`.
 5. **Stay local-first.** Every feature must work with cloud unconfigured (`cloudEnabled() === false`). Cloud code loads lazily via dynamic `import()` and must never break the offline path.
-6. **Sync safely.** The sync engine merges (progress = per-problem newer-wins union; rewards = collected-beats-earned) — solves are never lost. Follow the existing merge strategies in `lib/cloud/merge.js`.
+6. **Sync safely.** The generic engine (`lib/cloud/sync/engine.ts`) merges per record, newest `updatedAt` wins (remote wins exact ties). State changes are domain flags (`isDone`, `isDeleted`, `isRevoked`), never hard deletes. New synced data gets an entry in `lib/cloud/sync/entities.ts`.
 7. **Dark mode everywhere.** Every new UI must include `dark:` classes. Test by toggling the theme in Settings.
 
 ## Commit conventions
@@ -113,7 +117,7 @@ Scopes are the area touched (`home`, `notes`, `leaderboard`, `cloud`, `auth`, `u
 
 1. **Fork** the repo and create a branch from `main` (`feat/my-thing`, `fix/my-bug`).
 2. Make your change following the architecture rules above.
-3. **Verify**: `npm run build` must pass. Manually test both **light and dark mode**, and — if you touched cloud code — both **signed-out (offline)** and **signed-in** states.
+3. **Verify**: `npm run typecheck`, `npm test`, and `npm run build` must pass. Manually test both **light and dark mode**, and — if you touched cloud code — both **signed-out (offline)** and **signed-in** states.
 4. Update docs/screenshots if the UI visibly changed.
 5. Open a PR with: what changed, why, how you tested, and screenshots for UI changes.
 6. A maintainer will review. Please respond to feedback with follow-up commits on the same branch.
