@@ -10,8 +10,8 @@ import {
   signInGoogle,
   signUpEmail,
   signOutUser,
-} from "../lib/auth.js";
-import { cloudEnabled } from "../lib/cloud/firebase.js";
+} from "../lib/auth.ts";
+import { cloudEnabled } from "../lib/cloud/firebase.ts";
 import { syncErrorHint } from "../lib/cloud/sync.ts";
 import { useTheme } from "../lib/entities/prefs.ts";
 import {
@@ -20,7 +20,7 @@ import {
   SettingsIcon,
   SunIcon,
   UserIcon,
-} from "./icons.jsx";
+} from "./icons.tsx";
 import {
   Avatar,
   Button,
@@ -29,7 +29,7 @@ import {
   Input,
   Modal,
   Popover,
-} from "./primitives/index.js";
+} from "./primitives/index.ts";
 
 function GoogleMark() {
   return (

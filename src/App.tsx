@@ -1,17 +1,17 @@
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
-import HomePage from "./features/home/HomePage.jsx";
-import TopicPage from "./features/topics/TopicPage.jsx";
-import NotesPage from "./features/notes/NotesPage.jsx";
-import SettingsPage from "./features/settings/SettingsPage.jsx";
-import TopicsPage from "./features/topics/TopicsPage.jsx";
-import ProgressPage from "./features/progress/ProgressPage.jsx";
+import HomePage from "./features/home/HomePage.tsx";
+import TopicPage from "./features/topics/TopicPage.tsx";
+import NotesPage from "./features/notes/NotesPage.tsx";
+import SettingsPage from "./features/settings/SettingsPage.tsx";
+import TopicsPage from "./features/topics/TopicsPage.tsx";
+import ProgressPage from "./features/progress/ProgressPage.tsx";
 import { useSolves } from "./lib/entities/solves.ts";
 import { useTheme } from "./lib/entities/prefs.ts";
-import { useAuth } from "./lib/auth.js";
+import { useAuth } from "./lib/auth.ts";
 import { useCloudSync } from "./lib/cloud/sync.ts";
-import Header from "./components/Header.jsx";
-import PublicProfilePage from "./features/profile/PublicProfilePage.jsx";
-import LeaderboardPage from "./features/leaderboard/LeaderboardPage.jsx";
+import Header from "./components/Header.tsx";
+import PublicProfilePage from "./features/profile/PublicProfilePage.tsx";
+import LeaderboardPage from "./features/leaderboard/LeaderboardPage.tsx";
 
 // HashRouter is required for gh-pages: static hosting has no URL
 // rewrites, so deep links only work with hash-based routing.

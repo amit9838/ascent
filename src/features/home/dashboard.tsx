@@ -17,10 +17,10 @@ import {
   StarIcon,
   TargetIcon,
   ZapIcon,
-} from "../../components/icons.jsx";
+} from "../../components/icons.tsx";
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
-import { ProgressBar } from "../../components/ui.jsx";
+import { ProgressBar } from "../../components/ui.tsx";
 
 export type SolvesMap = Record<string, string>;
 export type PointsMap = Record<string, number>;

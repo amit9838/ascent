@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { HTMLAttributes } from "react";
-import { cx } from "../../lib/cx.js";
+import { cx } from "../../lib/cx.ts";
 
 export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   src?: string | null;

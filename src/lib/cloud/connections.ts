@@ -15,10 +15,10 @@
 // Emails are stored only as SHA-256 hashes so the index can't be enumerated
 // or harvested. Writing is restricted to your own entry by rules.
 
-import { getProfile } from "./follow.js";
-import type { Profile } from "./follow.js";
-import { loadFirestore } from "./firebase.js";
-import { cached, invalidateTag } from "../cache.js";
+import { getProfile } from "./follow.ts";
+import type { Profile } from "./follow.ts";
+import { loadFirestore } from "./firebase.ts";
+import { cached, invalidateTag } from "../cache.ts";
 
 export interface Invite {
   uid: string;

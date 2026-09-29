@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
-import { cx } from "../../lib/cx.js";
-import { IconButton } from "./Button.jsx";
+import { cx } from "../../lib/cx.ts";
+import { IconButton } from "./Button.tsx";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl";
 

@@ -3,14 +3,14 @@
 // reward events change, so it can never leak more than the user chose to
 // share (shareEnabled flag, enforced by Firestore rules).
 
-import { loadProblemIndex } from "../data/problems.js";
+import { loadProblemIndex } from "../data/problems.ts";
 import { buildPointsMap, pointsOf } from "../gamification/points.ts";
 import { currentStreak } from "../gamification/activity.ts";
 import { currentRank } from "../gamification/titles.ts";
 import { getSolvedMap } from "../entities/solves.ts";
 import { getRewardCounts } from "../gamification/rewards.ts";
 import { subscribeRecords } from "../store/records.ts";
-import { cached, forget } from "../cache.js";
+import { cached, forget } from "../cache.ts";
 
 export interface ProfileSummary {
   solved: number;

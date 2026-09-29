@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cx } from "../../lib/cx.js";
+import { cx } from "../../lib/cx.ts";
 
 export interface DividerProps {
   label?: ReactNode;

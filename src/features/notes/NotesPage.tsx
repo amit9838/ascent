@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
 import { Link } from "react-router-dom";
-import { BackIcon, DownloadIcon, NotesIcon, TrashIcon } from "../../components/icons.jsx";
-import { Avatar, Button, IconButton, Modal } from "../../components/primitives/index.js";
+import { BackIcon, DownloadIcon, NotesIcon, TrashIcon } from "../../components/icons.tsx";
+import { Avatar, Button, IconButton, Modal } from "../../components/primitives/index.ts";
 import { subscribeRecords } from "../../lib/store/records.ts";
-import { useAuth } from "../../lib/auth.js";
-import { cloudEnabled } from "../../lib/cloud/firebase.js";
-import { getProfile } from "../../lib/cloud/follow.js";
+import { useAuth } from "../../lib/auth.ts";
+import { cloudEnabled } from "../../lib/cloud/firebase.ts";
+import { getProfile } from "../../lib/cloud/follow.ts";
 import {
   fetchSharedNote,
   leaveSharedNote,
@@ -16,7 +16,7 @@ import {
   stopSharing,
   subscribeSharedInbox,
   unshareMember,
-} from "../../lib/cloud/sharedNotes.js";
+} from "../../lib/cloud/sharedNotes.ts";
 import type { SharedMemberInfo } from "../../lib/cloud/sharedNotes.ts";
 import {
   MAX_NOTES,

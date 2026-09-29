@@ -1,5 +1,5 @@
-import { StatStrip } from "./StatStrip.jsx";
-import { Avatar } from "../../../components/primitives/index.js";
+import { StatStrip } from "./StatStrip.tsx";
+import { Avatar } from "../../../components/primitives/index.ts";
 import type { Profile } from "../../../lib/cloud/follow.ts";
 import type { ProfileSummary } from "../../../lib/cloud/profileSummary.ts";
 import type { ReactNode } from "react";

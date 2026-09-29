@@ -2,7 +2,7 @@
 //
 // Zero browser dependencies on purpose: this module imports only the CSV
 // column map, so it runs under plain `node --test` with fixture rows.
-// The async catalog loader lives in problems.js.
+// The async catalog loader lives in problems.ts.
 //
 // Identity rules (must stay in sync with scripts/assign-problem-ids.mjs):
 //   - `id` is the source of truth; `#` is display order only.
@@ -12,8 +12,8 @@
 //   - byUrl keeps the FIRST topic's entry when a URL repeats (canonical
 //     home = alphabetical-first file, same rule as the assign script).
 
-import { F } from "../csv.js";
-import type { CsvRow } from "../csv.js";
+import { F } from "../csv.ts";
+import type { CsvRow } from "../csv.ts";
 
 export interface Problem {
   id: string;

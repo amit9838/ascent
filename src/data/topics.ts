@@ -15,7 +15,7 @@ import {
   ShareIcon,
   TableIcon,
   TypeIcon,
-} from "../components/icons.jsx";
+} from "../components/icons.tsx";
 
 export interface Topic {
   slug: string;

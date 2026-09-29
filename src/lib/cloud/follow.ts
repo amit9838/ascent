@@ -3,8 +3,8 @@
 // Owner-only writes; visibility is governed by the target's shareEnabled
 // flag (see firestore.rules).
 
-import { loadFirestore } from "./firebase.js";
-import { cached, forget } from "../cache.js";
+import { loadFirestore } from "./firebase.ts";
+import { cached, forget } from "../cache.ts";
 
 export interface Profile {
   uid: string;

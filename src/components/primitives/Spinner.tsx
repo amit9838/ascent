@@ -1,4 +1,4 @@
-import { cx } from "../../lib/cx.js";
+import { cx } from "../../lib/cx.ts";
 
 export interface SpinnerProps {
   className?: string;

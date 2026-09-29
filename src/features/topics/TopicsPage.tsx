@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { TOPICS, workatTopicUrl } from "../../data/topics.js";
-import { loadProblemIndex } from "../../lib/data/problems.js";
+import { TOPICS, workatTopicUrl } from "../../data/topics.ts";
+import { loadProblemIndex } from "../../lib/data/problems.ts";
 import type { Problem, ProblemIndex } from "../../lib/data/problemRows.ts";
-import { DifficultyBar, ProgressBar } from "../../components/ui.jsx";
-import type { DifficultyMix } from "../../components/ui.jsx";
+import { DifficultyBar, ProgressBar } from "../../components/ui.tsx";
+import type { DifficultyMix } from "../../components/ui.tsx";
 import {
   ArrowRightIcon,
   ExternalIcon,
   GridIcon,
   ListIcon,
-} from "../../components/icons.jsx";
+} from "../../components/icons.tsx";
 import { useTopicsView } from "../../lib/entities/prefs.ts";
 import { useSeo } from "../../lib/seo.ts";
 

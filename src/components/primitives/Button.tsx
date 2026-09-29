@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { cx } from "../../lib/cx.js";
-import { Spinner } from "./Spinner.jsx";
+import { cx } from "../../lib/cx.ts";
+import { Spinner } from "./Spinner.tsx";
 
 export type ButtonVariant =
   | "primary"

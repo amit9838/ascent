@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { CoinStack } from "../../../components/CoinStack.jsx";
+import { CoinStack } from "../../../components/CoinStack.tsx";
 
 // Borderless coin display: stack + big count sitting directly on the
 // section background (no card-within-card).

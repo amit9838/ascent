@@ -9,18 +9,18 @@ import {
   TrashIcon,
   UploadIcon,
   UserIcon,
-} from "../../components/icons.jsx";
-import { applyBackup, exportProfile, parseBackup } from "./backup.js";
+} from "../../components/icons.tsx";
+import { applyBackup, exportProfile, parseBackup } from "./backup.ts";
 import type { ParsedBackup } from "./backup.ts";
-import { AuthModal } from "../../components/AuthMenu.jsx";
-import { Avatar } from "../../components/primitives/index.js";
+import { AuthModal } from "../../components/AuthMenu.tsx";
+import { Avatar } from "../../components/primitives/index.ts";
 import {
   deleteAccountAndCloudData,
   setDisplayName,
   signOutUser,
-} from "../../lib/auth.js";
-import { cloudEnabled } from "../../lib/cloud/firebase.js";
-import { getProfile, updateProfileDoc } from "../../lib/cloud/follow.js";
+} from "../../lib/auth.ts";
+import { cloudEnabled } from "../../lib/cloud/firebase.ts";
+import { getProfile, updateProfileDoc } from "../../lib/cloud/follow.ts";
 import { refreshProfileSummary, syncErrorHint } from "../../lib/cloud/sync.ts";
 import type { SyncStatus } from "../../lib/cloud/sync/engine.ts";
 

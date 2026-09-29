@@ -1,6 +1,5 @@
 // Unit tests for the E1 problem builders (problemRows.ts).
-// Kept for reference — there is currently no test runner configured
-// (`npm test` was removed along with tests/).
+// Run with `npm test` (Node's built-in runner; Node strips the types).
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -8,7 +7,7 @@ import {
   buildProblemIndex,
   buildTopicProblems,
   rowToProblem,
-} from "./problemRows.js";
+} from "./problemRows.ts";
 
 function csvRow(overrides = {}) {
   return {

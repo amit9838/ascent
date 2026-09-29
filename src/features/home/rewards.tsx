@@ -9,8 +9,8 @@ import {
 } from "../../lib/gamification/rewards.ts";
 import type { RewardStatusView } from "../../lib/gamification/rewards.ts";
 import { useWeeklyTarget } from "../../lib/entities/settings.ts";
-import { CheckIcon, GiftIcon , ArrowRightIcon} from "../../components/icons.jsx";
-import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
+import { CheckIcon, GiftIcon , ArrowRightIcon} from "../../components/icons.tsx";
+import { GoldCoin, SapphireCoin } from "../../components/coins.tsx";
 
 
 const primaryBtn =

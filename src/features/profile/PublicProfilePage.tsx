@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { cloudEnabled } from "../../lib/cloud/firebase.js";
-import { getProfile } from "../../lib/cloud/follow.js";
-import type { Profile } from "../../lib/cloud/follow.js";
-import type { ProfileSummary } from "../../lib/cloud/profileSummary.js";
+import { cloudEnabled } from "../../lib/cloud/firebase.ts";
+import { getProfile } from "../../lib/cloud/follow.ts";
+import type { Profile } from "../../lib/cloud/follow.ts";
+import type { ProfileSummary } from "../../lib/cloud/profileSummary.ts";
 import {
   getSentStatus,
   isConnected,
   sendInviteToUid,
-} from "../../lib/cloud/connections.js";
-import { useAuth } from "../../lib/auth.js";
-import { AuthModal } from "../../components/AuthMenu.jsx";
+} from "../../lib/cloud/connections.ts";
+import { useAuth } from "../../lib/auth.ts";
+import { AuthModal } from "../../components/AuthMenu.tsx";
 import {
   CARD,
   CoinCard,
@@ -18,9 +18,9 @@ import {
   ProfileHero,
   RankPath,
   SectionHead,
-} from "./components/index.js";
-import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
-import { BackIcon, CheckIcon, UserIcon } from "../../components/icons.jsx";
+} from "./components/index.ts";
+import { GoldCoin, SapphireCoin } from "../../components/coins.tsx";
+import { BackIcon, CheckIcon, UserIcon } from "../../components/icons.tsx";
 
 type Relation = "loading" | "self" | "signedout" | "connected" | "pending" | "none";
 

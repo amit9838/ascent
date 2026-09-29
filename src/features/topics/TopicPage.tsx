@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getTopic, workatTopicUrl } from "../../data/topics.js";
-import { loadProblemIndex } from "../../lib/data/problems.js";
+import { getTopic, workatTopicUrl } from "../../data/topics.ts";
+import { loadProblemIndex } from "../../lib/data/problems.ts";
 import type { Problem } from "../../lib/data/problemRows.ts";
-import { DifficultyBadge, ExternalLink, ProgressBar } from "../../components/ui.jsx";
-import { BackIcon, ExternalIcon, SearchIcon } from "../../components/icons.jsx";
+import { DifficultyBadge, ExternalLink, ProgressBar } from "../../components/ui.tsx";
+import { BackIcon, ExternalIcon, SearchIcon } from "../../components/icons.tsx";
 import { useSeo } from "../../lib/seo.ts";
 
 export default function TopicPage({

@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import { cached } from "./cache.js";
+import { cached } from "./cache.ts";
 
 // Friendly names for the exact CSV header columns.
 export const F = {

@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { cx } from "../../lib/cx.js";
+import { cx } from "../../lib/cx.ts";
 
 export const CARD_CLASS =
   "rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900";

@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { TOPICS } from "../../data/topics.js";
-import { loadProblemIndex } from "../../lib/data/problems.js";
+import { TOPICS } from "../../data/topics.ts";
+import { loadProblemIndex } from "../../lib/data/problems.ts";
 import type { Problem, ProblemIndex } from "../../lib/data/problemRows.ts";
 import { buildPointsMap, pointsOf } from "../../lib/gamification/points.ts";
-import { loadIgnored, pickQuestionOfTheDay, saveIgnored } from "./qotd.js";
+import { loadIgnored, pickQuestionOfTheDay, saveIgnored } from "./qotd.ts";
 import type { QotdCache, QotdPick } from "./qotd.ts";
-import { DifficultyBadge } from "../../components/ui.jsx";
+import { DifficultyBadge } from "../../components/ui.tsx";
 import {
   ActivityHeatmap,
   OverviewRow,
   WeeklyGoalCard,
-} from "./dashboard.jsx";
-import { RewardsCard } from "./rewards.jsx";
-import { ArrowRightIcon, CheckIcon, ExternalIcon } from "../../components/icons.jsx";
+} from "./dashboard.tsx";
+import { RewardsCard } from "./rewards.tsx";
+import { ArrowRightIcon, CheckIcon, ExternalIcon } from "../../components/icons.tsx";
 import { useSeo } from "../../lib/seo.ts";
 
 const ghostBtn =

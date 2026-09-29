@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import type { User } from "firebase/auth";
 import { Link, useLocation } from "react-router-dom";
-import AuthMenu from "./AuthMenu.jsx";
+import AuthMenu from "./AuthMenu.tsx";
 import type { SyncStatus } from "../lib/cloud/sync/engine.ts";
 import {
   ChartIcon,
@@ -12,7 +12,7 @@ import {
   NotesIcon,
   TrophyIcon,
   XIcon,
-} from "./icons.jsx";
+} from "./icons.tsx";
 
 interface HeaderLink {
   to: string;

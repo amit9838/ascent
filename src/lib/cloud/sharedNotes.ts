@@ -13,8 +13,8 @@
 //   users/{uid}/sharedWithMe/{id} = { shareId, ownerUid, title, updatedAt }
 
 import type { User } from "firebase/auth";
-import { loadFirestore } from "./firebase.js";
-import { sha256 } from "./connections.js";
+import { loadFirestore } from "./firebase.ts";
+import { sha256 } from "./connections.ts";
 
 export interface SharedMemberInfo {
   displayName?: string;

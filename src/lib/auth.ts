@@ -1,13 +1,13 @@
 // Auth: Google + email/password. Everything no-ops when Firebase env is
 // unset so the local-only app is unchanged. Firebase itself loads lazily
-// (src/lib/cloud/firebase.js) and never touches the main bundle.
+// (src/lib/cloud/firebase.ts) and never touches the main bundle.
 
 import { useEffect, useState } from "react";
 import type { User, UserCredential } from "firebase/auth";
-import { cloudEnabled, loadFirebaseAuth, loadFirestore } from "./cloud/firebase.js";
-import { sha256 } from "./cloud/connections.js";
+import { cloudEnabled, loadFirebaseAuth, loadFirestore } from "./cloud/firebase.ts";
+import { sha256 } from "./cloud/connections.ts";
 import { SETTINGS_DOC_ID } from "./entities/settings.ts";
-import { clearCache } from "./cache.js";
+import { clearCache } from "./cache.ts";
 
 type AuthKit = Awaited<ReturnType<typeof loadFirebaseAuth>>;
 

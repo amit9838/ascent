@@ -2,7 +2,7 @@
 // inputs, popups and surface chrome across the app. Features compose
 // these instead of re-declaring Tailwind button/input strings.
 
-export { Button, IconButton } from "./Button.jsx";
+export { Button, IconButton } from "./Button.tsx";
 export type {
   ButtonProps,
   ButtonSize,
@@ -10,20 +10,20 @@ export type {
   IconButtonProps,
   IconButtonSize,
   IconButtonVariant,
-} from "./Button.jsx";
-export { Spinner } from "./Spinner.jsx";
-export type { SpinnerProps } from "./Spinner.jsx";
-export { Input, Textarea, Select, Field } from "./Input.jsx";
-export type { FieldProps } from "./Input.jsx";
-export { Modal } from "./Modal.jsx";
-export type { ModalProps, ModalSize } from "./Modal.jsx";
-export { Popover } from "./Popover.jsx";
-export type { PopoverProps } from "./Popover.jsx";
-export { Badge } from "./Badge.jsx";
-export type { BadgeProps, BadgeTone } from "./Badge.jsx";
-export { Card, CARD_CLASS } from "./Card.jsx";
-export type { CardProps } from "./Card.jsx";
-export { Divider } from "./Divider.jsx";
-export type { DividerProps } from "./Divider.jsx";
-export { Avatar } from "./Avatar.jsx";
-export type { AvatarProps } from "./Avatar.jsx";
+} from "./Button.tsx";
+export { Spinner } from "./Spinner.tsx";
+export type { SpinnerProps } from "./Spinner.tsx";
+export { Input, Textarea, Select, Field } from "./Input.tsx";
+export type { FieldProps } from "./Input.tsx";
+export { Modal } from "./Modal.tsx";
+export type { ModalProps, ModalSize } from "./Modal.tsx";
+export { Popover } from "./Popover.tsx";
+export type { PopoverProps } from "./Popover.tsx";
+export { Badge } from "./Badge.tsx";
+export type { BadgeProps, BadgeTone } from "./Badge.tsx";
+export { Card, CARD_CLASS } from "./Card.tsx";
+export type { CardProps } from "./Card.tsx";
+export { Divider } from "./Divider.tsx";
+export type { DividerProps } from "./Divider.tsx";
+export { Avatar } from "./Avatar.tsx";
+export type { AvatarProps } from "./Avatar.tsx";

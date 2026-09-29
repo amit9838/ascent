@@ -4,7 +4,7 @@ import {
   FlameIcon,
   TrophyIcon,
   ZapIcon,
-} from "../../../components/icons.jsx";
+} from "../../../components/icons.tsx";
 import type { ProfileSummary } from "../../../lib/cloud/profileSummary.ts";
 
 // Icon + value stat tiles — no totals, no floating boxes.

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { TOPICS } from "../../data/topics.js";
-import { loadProblemIndex } from "../../lib/data/problems.js";
+import { TOPICS } from "../../data/topics.ts";
+import { loadProblemIndex } from "../../lib/data/problems.ts";
 import type { Problem, ProblemIndex } from "../../lib/data/problemRows.ts";
 import { buildPointsMap } from "../../lib/gamification/points.ts";
 import { useWeeklyTarget } from "../../lib/entities/settings.ts";
@@ -20,10 +20,10 @@ import {
   rankLadder,
 } from "../../lib/gamification/titles.ts";
 import type { RankStep } from "../../lib/gamification/titles.ts";
-import { CheckIcon, FlameIcon, StarIcon, TrophyIcon } from "../../components/icons.jsx";
-import { ProgressBar } from "../../components/ui.jsx";
-import { CoinStack } from "../../components/CoinStack.jsx";
-import { GoldCoin, SapphireCoin } from "../../components/coins.jsx";
+import { CheckIcon, FlameIcon, StarIcon, TrophyIcon } from "../../components/icons.tsx";
+import { ProgressBar } from "../../components/ui.tsx";
+import { CoinStack } from "../../components/CoinStack.tsx";
+import { GoldCoin, SapphireCoin } from "../../components/coins.tsx";
 
 function fmtFull(key: string /* YYYY-MM-DD, parsed without timezone shift */): string {
   const [y, m, d] = key.split("-").map(Number);

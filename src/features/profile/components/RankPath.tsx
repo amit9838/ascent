@@ -1,8 +1,8 @@
 import { currentRank, rankLadder } from "../../../lib/gamification/titles.ts";
 import type { RankStep } from "../../../lib/gamification/titles.ts";
-import { CheckIcon, TrophyIcon } from "../../../components/icons.jsx";
-import { CARD } from "./card.js";
-import { SectionHead } from "./SectionHead.jsx";
+import { CheckIcon, TrophyIcon } from "../../../components/icons.tsx";
+import { CARD } from "./card.ts";
+import { SectionHead } from "./SectionHead.tsx";
 
 function rankReq(r: RankStep, total: number): string {
   if (r.solves === 1) return "Solve your first problem";

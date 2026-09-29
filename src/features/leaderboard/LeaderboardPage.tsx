@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { User } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { cloudEnabled } from "../../lib/cloud/firebase.js";
-import { computeSummary } from "../../lib/cloud/profileSummary.js";
-import type { ProfileSummary } from "../../lib/cloud/profileSummary.js";
-import { subscribeProfile } from "../../lib/cloud/follow.js";
-import type { Profile } from "../../lib/cloud/follow.js";
+import { cloudEnabled } from "../../lib/cloud/firebase.ts";
+import { computeSummary } from "../../lib/cloud/profileSummary.ts";
+import type { ProfileSummary } from "../../lib/cloud/profileSummary.ts";
+import { subscribeProfile } from "../../lib/cloud/follow.ts";
+import type { Profile } from "../../lib/cloud/follow.ts";
 import {
   acceptInvite,
   clearFinishedSentInvites,
@@ -18,10 +18,10 @@ import {
   subscribeInvites,
   subscribeSent,
   withdrawInvite,
-} from "../../lib/cloud/connections.js";
-import type { DirectoryEntry, Invite } from "../../lib/cloud/connections.js";
-import { CheckIcon, FlameIcon, HashIcon, MoreIcon, TrophyIcon, UserIcon, ZapIcon } from "../../components/icons.jsx";
-import { Button, Avatar, IconButton, Popover } from "../../components/primitives/index.js";
+} from "../../lib/cloud/connections.ts";
+import type { DirectoryEntry, Invite } from "../../lib/cloud/connections.ts";
+import { CheckIcon, FlameIcon, HashIcon, MoreIcon, TrophyIcon, UserIcon, ZapIcon } from "../../components/icons.tsx";
+import { Button, Avatar, IconButton, Popover } from "../../components/primitives/index.ts";
 import { rankTier } from "../../lib/gamification/titles.ts";
 
 const card =

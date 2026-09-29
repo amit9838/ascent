@@ -13,13 +13,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
-import { loadFirestore } from "./firebase.js";
+import { loadFirestore } from "./firebase.ts";
 import { createEngine } from "./sync/engine.ts";
 import type { SyncStatus } from "./sync/engine.ts";
 import { SYNC_ENTITIES } from "./sync/entities.ts";
-import { computeSummary } from "./profileSummary.js";
-import { invalidateProfile } from "./follow.js";
-import { registerEmailIndex } from "./connections.js";
+import { computeSummary } from "./profileSummary.ts";
+import { invalidateProfile } from "./follow.ts";
+import { registerEmailIndex } from "./connections.ts";
 
 let firestoreKit = null as ReturnType<typeof loadFirestore> | null;
 const fs = () => (firestoreKit ??= loadFirestore());

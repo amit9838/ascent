@@ -1,16 +1,16 @@
 // E1 Problem index loader (docs/data-model-redesign.md §3).
 //
-// Pure row/index builders live in problemRows.js (unit-tested); this module
+// Pure row/index builders live in problemRows.ts (unit-tested); this module
 // only wires them to the topic CSVs with a session memo.
 
-import { TOPICS } from "../../data/topics.js";
-import { loadTopicCsv } from "../csv.js";
+import { TOPICS } from "../../data/topics.ts";
+import { loadTopicCsv } from "../csv.ts";
 import {
   buildProblemIndex,
   buildTopicProblems,
   rowToProblem,
-} from "./problemRows.js";
-import type { Problem, ProblemIndex } from "./problemRows.js";
+} from "./problemRows.ts";
+import type { Problem, ProblemIndex } from "./problemRows.ts";
 
 export { buildProblemIndex, buildTopicProblems, rowToProblem };
 export type { Problem, ProblemIndex };
