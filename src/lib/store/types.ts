@@ -47,7 +47,8 @@ export interface SettingsRow {
 
 export interface RewardEventRecord {
   id: string;
-  kind: "daily" | "weekly";
+  /** "weekly" = legacy perfect-week crowns, kept readable but ignored. */
+  kind: "daily" | "crown" | "weekly";
   periodStart: string;
   target?: number;
   status: "earned" | "collected";

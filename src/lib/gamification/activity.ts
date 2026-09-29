@@ -106,6 +106,7 @@ export interface HeatmapDay {
   key: string;
   points: number;
   future: boolean;
+  isToday: boolean;
   label: string;
 }
 
@@ -131,6 +132,7 @@ export function heatmapWeeks(
         key: k,
         points: counts[k] ?? 0,
         future: k > todayK,
+        isToday: k === todayK,
         label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
       });
     }

@@ -1,18 +1,22 @@
 // E6 RewardEvent entity + rewards engine (docs/schema-v3-plan.md §2).
 //
-// Daybreak Stars (hit the daily target) and Sapphire Crowns (hit the daily
-// target every day of a week). One record per period:
-//   { id: "YYYY-MM-DD:daily" | "YYYY-Www:weekly", kind, periodStart,
-//     target, status: earned|collected, earnedAt, updatedAt, isRevoked? }
+// Daybreak Stars (hit the daily target) and Sapphire Crowns (a star on
+// CROWN_DAYS consecutive days, any start day — rules in crowns.ts). One
+// record per period:
+//   { id: "YYYY-MM-DD:daily" | "YYYY-MM-DD:crown" (first day of the run),
+//     kind, periodStart, target, status: earned|collected, earnedAt,
+//     updatedAt, isRevoked? }
+// Legacy "weekly" rows (Monday-keyed perfect weeks) are ignored.
 //
 // `target` is snapshotted at earn time so lowering the weekly target later
 // never un-earns a star. Status only moves earned → collected (manual Claim
 // in the UI); the sync engine merges records with plain per-record LWW.
 //
-// Returns the { daily, weekly } status view the Rewards UI renders.
+// Returns the { daily, crowns } status view the Rewards UI renders.
 // `now` overrides exist for testing.
 
-import { dayKey, dayPoints, weekStart } from "./activity.ts";
+import { dayKey, dayPoints } from "./activity.ts";
+import { scanCrowns } from "./crowns.ts";
 import { deleteRecord, getAllRecords, getRecord, putRecord } from "../store/records.ts";
 import type { RewardEventRecord } from "../store/types.ts";
 
@@ -20,19 +24,16 @@ const STORE = "rewardEvents";
 
 export type RewardStatus = "earned" | "collected";
 
-// Status view for the UI: { daily: {date: status}, weekly: {week: status} }.
+type RewardKind = "daily" | "crown";
+
+// Status view for the UI: { daily: {date: status}, crowns: {runStart: status} }.
 export interface RewardStatusView {
   daily: Record<string, RewardStatus>;
-  weekly: Record<string, RewardStatus>;
+  crowns: Record<string, RewardStatus>;
 }
 
 function isoNow(): string {
   return new Date().toISOString();
-}
-
-function parseDay(key: string /* YYYY-MM-DD, noon local to avoid TZ shifts */) {
-  const [y, m, d] = key.split("-").map(Number);
-  return new Date(y, m - 1, d, 12);
 }
 
 function eventId(kind: string, periodKey: string): string {
@@ -50,7 +51,7 @@ export function dailyTarget(weeklyTarget: number): number {
 }
 
 async function earnEvent(
-  kind: "daily" | "weekly",
+  kind: RewardKind,
   periodKey: string,
   target: number,
   at: string
@@ -72,14 +73,14 @@ async function earnEvent(
 
 async function loadStatusView(): Promise<RewardStatusView> {
   const daily: Record<string, RewardStatus> = {};
-  const weekly: Record<string, RewardStatus> = {};
+  const crowns: Record<string, RewardStatus> = {};
   for (const event of await getAllRecords(STORE)) {
     if (!event || isEventRevoked(event)) continue;
     if (event.status !== "earned" && event.status !== "collected") continue;
     if (event.kind === "daily") daily[event.periodStart] = event.status;
-    else if (event.kind === "weekly") weekly[event.periodStart] = event.status;
+    else if (event.kind === "crown") crowns[event.periodStart] = event.status;
   }
-  return { daily, weekly };
+  return { daily, crowns };
 }
 
 // Marks newly-earned rewards as "earned" (never touches "collected").
@@ -101,31 +102,16 @@ export async function refreshRewards(
     }
   }
 
-  const days = Object.keys(counts).sort();
-  if (days.length) {
-    const currentWeek = weekStart(now);
-    let week = weekStart(parseDay(days[0]));
-    while (week <= currentWeek) {
-      const weekKey = dayKey(week);
-      let perfect = true;
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(week);
-        day.setDate(day.getDate() + i);
-        const dayK = dayKey(day);
-        if (dayK > todayK || (counts[dayK] ?? 0) < target) {
-          perfect = false;
-          break;
-        }
-      }
-      if (perfect) await earnEvent("weekly", weekKey, target, stamped);
-      week.setDate(week.getDate() + 7);
-    }
-  }
+  // Crowns derive from star records (earned or collected), not raw counts,
+  // so a star earned under an older target still counts.
+  const view = await loadStatusView();
+  const { starts } = scanCrowns(Object.keys(view.daily), Object.keys(view.crowns));
+  for (const start of starts) await earnEvent("crown", start, target, stamped);
 
   return loadStatusView();
 }
 
-async function collect(kind: "daily" | "weekly", periodKey: string): Promise<RewardStatusView> {
+async function collect(kind: RewardKind, periodKey: string): Promise<RewardStatusView> {
   const event = await getRecord(STORE, eventId(kind, periodKey));
   if (event && !isEventRevoked(event) && event.status === "earned") {
     await putRecord(STORE, { ...event, status: "collected", updatedAt: isoNow() });
@@ -137,8 +123,8 @@ export function collectDaily(dayKeyStr: string): Promise<RewardStatusView> {
   return collect("daily", dayKeyStr);
 }
 
-export function collectWeekly(weekKey: string): Promise<RewardStatusView> {
-  return collect("weekly", weekKey);
+export function collectCrown(runStart: string): Promise<RewardStatusView> {
+  return collect("crown", runStart);
 }
 
 // Tombstone every event (reset flow) so other devices drop them too.
@@ -155,11 +141,11 @@ export async function resetRewardEvents(): Promise<void> {
 // Pinned counting rule (was scattered across profile summary + UI):
 // collected events only.
 export async function getRewardCounts(): Promise<{ stars: number; crowns: number }> {
-  const { daily, weekly } = await loadStatusView();
+  const { daily, crowns } = await loadStatusView();
   const collected = (status: RewardStatus) => status === "collected";
   return {
     stars: Object.values(daily).filter(collected).length,
-    crowns: Object.values(weekly).filter(collected).length,
+    crowns: Object.values(crowns).filter(collected).length,
   };
 }
 
